@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "skills": {
+    "adaptive": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "jetpack-compose/adaptive/SKILL.md",
+      "computedHash": "4e82dc5bff1bc000caf6ae010085b9dd045220d3f731eac3655c66d294b1fc19"
+    },
+    "android-emulator": {
+      "source": "chunkytofustudios/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "skills/android-emulator/SKILL.md",
+      "computedHash": "8da491e973d7574b5ffc73b0fa90e9dbbab2d683e6b82cb479205bd1408cc48c"
+    },
+    "android-profiler": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "profilers/android-profiler/SKILL.md",
+      "computedHash": "965d7c65ddf4f3972421edacf02dce91f85e4d272ee0a464ed793091d92de9b2"
+    },
+    "conventional-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/conventional-commit/SKILL.md",
+      "computedHash": "f29c9486cede6c7b2df0cfb0a2e4aa67446552b991bcf17d1b309e903171f03d"
+    },
+    "design-polish": {
+      "source": "chunkytofustudios/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "skills/design-polish/SKILL.md",
+      "computedHash": "497693649383e6bb6c347a10703e671f1d5fe4ad450b3d07fc71e1add5c39f17"
+    },
+    "edge-to-edge": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "system/edge-to-edge/SKILL.md",
+      "computedHash": "a12a0edcb1cdee4c1e8b68b1b406f7fdf4535b726352aa358817ba400b9e02a0"
+    },
+    "expo-design-system": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-design-system/SKILL.md",
+      "computedHash": "cf425c344c671f3f75e300009791c88a821359282872c397ba97aa1f55c96abd"
+    },
+    "expo-dev-client": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-dev-client/SKILL.md",
+      "computedHash": "7b8b0ec9a98e96674b13b72b798bc1b0b0d122244dc22c54d375613eb525bcae"
+    },
+    "expo-native-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-native-ui/SKILL.md",
+      "computedHash": "8493aa734ed5522d89e02eddb974ec1dc03c6d714a0619eaf15d047ef0019d8e"
+    },
+    "expo-router": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-router/SKILL.md",
+      "computedHash": "1cc6bb6852cf44bb51e6f4cb50efb3bed48b486c7f8ba3ac8e06b6b82be2cd78"
+    },
+    "expo-ui": {
+      "source": "expo/skills",
+      "sourceType": "github",
+      "skillPath": "plugins/expo/skills/expo-ui/SKILL.md",
+      "computedHash": "132d7bea7b1f1d026d66efa3e2c252ba86b8fa9a468c97ed1bf3ca5415caec97"
+    },
+    "figma-use": {
+      "source": "figma/mcp-server-guide",
+      "sourceType": "github",
+      "skillPath": "skills/figma-use/SKILL.md",
+      "computedHash": "3e9610473d3a09b39fec224456f9a210b130f25a044c34b11fa9aa6aec2fe02e"
+    },
+    "gemini-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-api-dev/SKILL.md",
+      "computedHash": "e94bba029971b6f8e092c4d2a74dca0a302c7d6e85a90dd39ec748acd2b144bd"
+    },
+    "gemini-live-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-live-api-dev/SKILL.md",
+      "computedHash": "9e71b98f5004af7e10e731fa5b196d5e737bfe45593e7e5fe41482b4eb4cb8e8"
+    },
+    "git-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit/SKILL.md",
+      "computedHash": "2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21"
+    },
+    "migrate-xml-views-to-jetpack-compose": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "jetpack-compose/migration/migrate-xml-views-to-jetpack-compose/SKILL.md",
+      "computedHash": "1d72a60e0e7dfaef31d57db36e98d598d9e28797520cf114c44972d89dc59fe7"
+    },
+    "preview-widget": {
+      "source": "chunkytofustudios/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "skills/preview-widget/SKILL.md",
+      "computedHash": "9534c6e959670cd7bf2d556708b7d132021929131fec376198143e34206385e2"
+    },
+    "r8-analyzer": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "performance/r8-analyzer/SKILL.md",
+      "computedHash": "2bf5a05b0c45062918b3bb6b75daa7cb9808be15c7390d18c387c2d15be766fd"
+    },
+    "shadcn": {
+      "source": "shadcn/ui",
+      "sourceType": "github",
+      "skillPath": "skills/shadcn/SKILL.md",
+      "computedHash": "d04e43ec01e921558b93bb8046c14a42a22556689a2827243df900825a4e1604"
+    },
+    "styles": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "jetpack-compose/theming/styles/SKILL.md",
+      "computedHash": "0c3fce2a670efedf4f05e3b7abffbc9493436126ba227d79b0dee24bc58a3c13"
+    },
+    "symbolize-android-stacktrace": {
+      "source": "chunkytofustudios/flutter-skills",
+      "sourceType": "github",
+      "skillPath": "skills/symbolize-android-stacktrace/SKILL.md",
+      "computedHash": "0e2640b59ca4046bfa65bf5e9e68805ce9c6c977c961ada6ffc99eb790cd6210"
+    }
+  }
+}
