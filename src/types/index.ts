@@ -33,6 +33,8 @@ export interface UserProfile {
   total_correct: number;
   current_streak: number;
   best_streak: number;
+  show_letter_count?: boolean;
+  sound_enabled?: boolean;
 }
 
 export interface EloChangeResult {

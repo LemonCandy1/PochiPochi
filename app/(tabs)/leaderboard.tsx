@@ -1,7 +1,8 @@
 import { Award, Crown, Flame, Medal, Trophy } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
@@ -32,30 +33,33 @@ interface LeaderboardEntry {
 
 export default function LeaderboardScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+
+  const loadLeaderboardData = useCallback(async () => {
+    const user = await PochiRepository.getProfile();
+    setProfile(user);
+    const ranks = await PochiRepository.getLeaderboard();
+    setEntries(ranks);
+  }, []);
 
   useEffect(() => {
-    PochiRepository.getProfile().then(setProfile);
-  }, []);
+    loadLeaderboardData();
+  }, [loadLeaderboardData]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadLeaderboardData();
+    setRefreshing(false);
+  };
 
   const userElo = profile?.overall_elo ?? 1200;
   const rankTier = getEloRankTier(userElo);
-
-  // Curated competitive leaderboard entries matching prototype
-  const entries: LeaderboardEntry[] = [
-    { rank: 1, username: 'PochiMaster_99', avatar: 'dog', elo: 2150, streak: 28 },
-    { rank: 2, username: 'TriviaCat_Neko', avatar: 'cat', elo: 1980, streak: 19 },
-    { rank: 3, username: 'ProfessorOwl', avatar: 'owl', elo: 1840, streak: 14 },
-    {
-      rank: 4,
-      username: profile?.username ?? 'You',
-      avatar: 'user',
-      elo: userElo,
-      streak: profile?.current_streak ?? 0,
-      isCurrentUser: true,
-    },
-    { rank: 5, username: 'Aperika88', avatar: 'bear', elo: 1140, streak: 5 },
-    { rank: 6, username: 'Kenji_Ghibli', avatar: 'human', elo: 1080, streak: 3 },
-  ];
+  const topChampion = entries[0] ?? {
+    username: 'PochiMaster_99',
+    avatar: 'dog',
+    elo: 2150,
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -69,9 +73,17 @@ export default function LeaderboardScreen() {
         data={entries}
         keyExtractor={(item) => `rank-${item.rank}`}
         contentContainerStyle={styles.listContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[Colors.primaryDark]}
+            tintColor={Colors.primaryDark}
+          />
+        }
         ListHeaderComponent={() => (
           <>
-            {/* Top Podium (from prototype) */}
+            {/* Top Podium */}
             <View style={styles.podiumCard}>
               <View style={styles.crownRow}>
                 <Crown size={32} color={Colors.gold} fill={Colors.gold} />
@@ -80,10 +92,10 @@ export default function LeaderboardScreen() {
                 <PochiLabrador size={64} expression="excited" />
               </View>
               <Text style={styles.championTitle}>Current No. 1 Champion</Text>
-              <Text style={styles.championName}>PochiMaster_99</Text>
+              <Text style={styles.championName}>{topChampion.username}</Text>
               <View style={styles.championPill}>
                 <Trophy size={14} color={Colors.gold} />
-                <Text style={styles.championElo}>2,150 ELO</Text>
+                <Text style={styles.championElo}>{topChampion.elo.toLocaleString()} ELO</Text>
               </View>
             </View>
 

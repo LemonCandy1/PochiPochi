@@ -1,7 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
-import { Flame } from 'lucide-react-native';
+import { Flame, Settings } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ import {
   AudienceCrowd,
   PochiLabrador,
 } from '../../src/components/mascot/MascotVectors';
+import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
 import { ReportModal } from '../../src/components/modal/ReportModal';
 import { PochiRepository } from '../../src/data/repository';
 import { calculateDualElo, getSpeedMultiplier } from '../../src/engine/eloEngine';
@@ -44,6 +46,7 @@ export default function PlayScreen() {
   const [eloResult, setEloResult] = useState<EloChangeResult | null>(null);
   const [isBookmarked, setIsBookmarked] = useState<boolean>(false);
   const [reportModalVisible, setReportModalVisible] = useState<boolean>(false);
+  const [optionsModalVisible, setOptionsModalVisible] = useState<boolean>(false);
   const [revealedIndices, setRevealedIndices] = useState<number[]>([]);
 
   const currentRatioRef = useRef<number>(0);
@@ -175,7 +178,7 @@ export default function PlayScreen() {
   if (!currentQuestion || !profile) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <PochiLabrador size={64} expression="thinking" />
+        <PochiLabrador size={64} expression="pensive" />
         <Text style={styles.loadingText}>Fetching next question...</Text>
       </SafeAreaView>
     );
@@ -185,17 +188,28 @@ export default function PlayScreen() {
     gameState === 'resolved'
       ? isCorrect
         ? 'happy'
-        : 'concerned'
-      : 'thinking';
+        : 'confused'
+      : 'pensive';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* Top Game Bar */}
       <View style={styles.topGameBar}>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>
-            {currentQuestion.category.toUpperCase()}
-          </Text>
+        <View style={styles.leftCluster}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryBadgeText}>
+              {currentQuestion.category.toUpperCase()}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => setOptionsModalVisible(true)}
+            style={({ pressed }) => [
+              styles.settingsBtn,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Settings size={18} color={Colors.ink} />
+          </Pressable>
         </View>
 
         <View style={styles.topScoreCluster}>
@@ -229,12 +243,14 @@ export default function PlayScreen() {
           </View>
         </View>
 
-        {/* Answer Mask Slots */}
-        <AnswerMask
-          answer={currentQuestion.answer}
-          revealedIndices={revealedIndices}
-          showFullAnswer={gameState === 'resolved'}
-        />
+        {/* Answer Mask Slots (Optional based on user options toggle) */}
+        {profile.show_letter_count !== false && (
+          <AnswerMask
+            answer={currentQuestion.answer}
+            revealedIndices={revealedIndices}
+            showFullAnswer={gameState === 'resolved'}
+          />
+        )}
 
         {/* Sequential Word Streamer (Reveals words sequentially with NO ghost text) */}
         <ClueStreamer
@@ -310,6 +326,14 @@ export default function PlayScreen() {
         questionId={currentQuestion.id}
         onClose={() => setReportModalVisible(false)}
       />
+
+      {/* Game Options Menu Modal (Answer Letter Count, Supabase Sync, Sound) */}
+      <OptionsMenuModal
+        visible={optionsModalVisible}
+        profile={profile}
+        onUpdateProfile={(updated) => setProfile(updated)}
+        onClose={() => setOptionsModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -339,6 +363,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1.5,
     borderBottomColor: Colors.border,
+  },
+  leftCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   categoryBadge: {
     backgroundColor: Colors.cardSubtle,
@@ -387,6 +416,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     color: Colors.primaryDark,
+  },
+  settingsBtn: {
+    backgroundColor: Colors.card,
+    borderWidth: 1.5,
+    borderColor: Colors.borderDark,
+    borderRadius: 8,
+    padding: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,

@@ -34,9 +34,11 @@ import { PochiRepository } from '../../src/data/repository';
 import { getEloRankTier } from '../../src/engine/eloEngine';
 import { Colors } from '../../src/theme/colors';
 import { Category, UserProfile } from '../../src/types';
+import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
 
 export default function HomeScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [optionsModalVisible, setOptionsModalVisible] = useState<boolean>(false);
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncStatus, setSyncStatus] = useState<string>('J! Archive & TriviaQA ready');
@@ -98,6 +100,15 @@ export default function HomeScreen() {
               <Text style={styles.eloNumber}>{profile?.overall_elo ?? 1200}</Text>
               <Text style={styles.eloText}>ELO</Text>
             </View>
+            <Pressable
+              onPress={() => setOptionsModalVisible(true)}
+              style={({ pressed }) => [
+                styles.settingsBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+            >
+              <Settings size={20} color={Colors.ink} />
+            </Pressable>
             <View style={styles.avatarCircle}>
               <PochiLabrador size={38} expression="happy" />
             </View>
@@ -261,6 +272,16 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Game Options & Cloud Sync Modal */}
+      {profile && (
+        <OptionsMenuModal
+          visible={optionsModalVisible}
+          profile={profile}
+          onUpdateProfile={(updated) => setProfile(updated)}
+          onClose={() => setOptionsModalVisible(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -330,6 +351,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  settingsBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.borderDark,
+    backgroundColor: Colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dailyCard: {
     backgroundColor: Colors.primary,

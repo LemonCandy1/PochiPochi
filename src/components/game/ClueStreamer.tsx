@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../theme/colors';
 import { AudioHaptics } from '../../utils/audioHaptics';
@@ -12,9 +12,9 @@ interface ClueStreamerProps {
 }
 
 /**
- * Sequential Word-by-Word Clue Streamer
- * Reveals question text word by word at high speed without revealing any
- * unrevealed future words to the user.
+ * Smooth Per-Letter Clue Streamer
+ * Sequentially streams the question letter by letter with fluid cadence.
+ * Future characters are completely hidden with no ghost text or placeholders.
  */
 export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   fullText,
@@ -23,13 +23,7 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   onProgressUpdate,
   onStreamComplete,
 }) => {
-  // Split the clue into discrete words
-  const words = useMemo(() => {
-    return fullText ? fullText.trim().split(/\s+/).filter(Boolean) : [];
-  }, [fullText]);
-
-  // How many words have been sequentially revealed so far
-  const [revealedWordsCount, setRevealedWordsCount] = useState<number>(1);
+  const [revealedChars, setRevealedChars] = useState<number>(1);
   const timerRef = useRef<any>(null);
 
   const onProgressUpdateRef = useRef(onProgressUpdate);
@@ -37,59 +31,62 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   const onStreamCompleteRef = useRef(onStreamComplete);
   onStreamCompleteRef.current = onStreamComplete;
 
-  // Reset to initial word on new question text
+  // Reset to first character when question text changes
   useEffect(() => {
-    setRevealedWordsCount(1);
-    if (words.length > 0) {
-      onProgressUpdateRef.current?.(1 / words.length);
+    setRevealedChars(1);
+    if (fullText.length > 0) {
+      onProgressUpdateRef.current?.(1 / fullText.length);
     }
-  }, [fullText, words.length]);
+  }, [fullText]);
 
-  // Pure interval ticker: increments revealedWordsCount every 240ms
+  // Smooth per-letter interval ticker
   useEffect(() => {
     if (!isStreaming || isFrozen) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
 
+    // 28ms cadence for a rapid, fluid reading experience per letter
     timerRef.current = setInterval(() => {
-      setRevealedWordsCount((prev) => {
-        if (prev >= words.length) {
+      setRevealedChars((prev) => {
+        if (prev >= fullText.length) {
           if (timerRef.current) clearInterval(timerRef.current);
           return prev;
         }
-        AudioHaptics.playTypewriterTick();
-        return prev + 1;
+        const next = prev + 1;
+        // Subtle audio tick every 6 letters for tactile café aesthetic
+        if (next % 6 === 0) {
+          AudioHaptics.playTypewriterTick();
+        }
+        return next;
       });
-    }, 240);
+    }, 28);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [words.length, isStreaming, isFrozen]);
+  }, [fullText.length, isStreaming, isFrozen]);
 
-  // Dedicated effect to notify parent on word reveal progress
+  // Notify parent component on progress update
   useEffect(() => {
-    if (words.length > 0) {
-      const ratio = Math.min(1, revealedWordsCount / words.length);
+    if (fullText.length > 0) {
+      const ratio = Math.min(1, revealedChars / fullText.length);
       onProgressUpdateRef.current?.(ratio);
-      if (revealedWordsCount >= words.length && isStreaming && !isFrozen) {
+      if (revealedChars >= fullText.length && isStreaming && !isFrozen) {
         onStreamCompleteRef.current?.();
       }
     }
-  }, [revealedWordsCount, words.length, isStreaming, isFrozen]);
+  }, [revealedChars, fullText.length, isStreaming, isFrozen]);
 
-  // If resolved/frozen, show full text so player can review complete clue
-  // Otherwise, strictly show only the words revealed so far, with NO ghost or future text
-  const visibleText = isFrozen
-    ? fullText
-    : words.slice(0, revealedWordsCount).join(' ');
+  // When frozen/resolved, display full text. When streaming, display only letters revealed so far.
+  // NO ghost text or placeholders for future characters.
+  const visibleText = isFrozen ? fullText : fullText.slice(0, revealedChars);
 
   return (
     <View style={styles.container}>
       <Text style={styles.clueText}>
         <Text style={styles.visiblePart}>{visibleText}</Text>
-        {isStreaming && !isFrozen && revealedWordsCount < words.length && (
+        {isStreaming && !isFrozen && revealedChars < fullText.length && (
           <Text style={styles.cursor}> ▌</Text>
         )}
       </Text>
