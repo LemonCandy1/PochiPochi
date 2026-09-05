@@ -15,6 +15,7 @@ const SUPABASE_URL =
 
 const SUPABASE_ANON_KEY =
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.EXPO_PUBLIC_SUPABASE_KEY ||
   'public-anon-key-placeholder';
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -25,7 +26,9 @@ export class SupabaseService {
    */
   public static isConfigured(): boolean {
     const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-    const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    const key =
+      process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.EXPO_PUBLIC_SUPABASE_KEY;
     return Boolean(
       url &&
       key &&
@@ -41,7 +44,10 @@ export class SupabaseService {
   public static getClient(): SupabaseClient {
     if (!supabaseInstance) {
       const url = process.env.EXPO_PUBLIC_SUPABASE_URL || SUPABASE_URL;
-      const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY;
+      const key =
+        process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+        process.env.EXPO_PUBLIC_SUPABASE_KEY ||
+        SUPABASE_ANON_KEY;
       supabaseInstance = createClient(url, key, {
         auth: {
           persistSession: false,
