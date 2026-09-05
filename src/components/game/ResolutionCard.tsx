@@ -21,6 +21,7 @@ interface ResolutionCardProps {
   isCorrect: boolean;
   eloResult: EloChangeResult;
   isBookmarked: boolean;
+  isLoadingNext?: boolean;
   onToggleBookmark: () => void;
   onOpenReport: () => void;
   onNextQuestion: () => void;
@@ -31,6 +32,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
   isCorrect,
   eloResult,
   isBookmarked,
+  isLoadingNext = false,
   onToggleBookmark,
   onOpenReport,
   onNextQuestion,
@@ -146,12 +148,16 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
 
         <Pressable
           onPress={onNextQuestion}
+          disabled={isLoadingNext}
           style={({ pressed }) => [
             styles.nextButton,
-            pressed && styles.buttonPressed,
+            isLoadingNext && { opacity: 0.6 },
+            pressed && !isLoadingNext && styles.buttonPressed,
           ]}
         >
-          <Text style={styles.nextButtonText}>Next Question →</Text>
+          <Text style={styles.nextButtonText}>
+            {isLoadingNext ? 'Loading...' : 'Next Question →'}
+          </Text>
         </Pressable>
       </View>
     </View>

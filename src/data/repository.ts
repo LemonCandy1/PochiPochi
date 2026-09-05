@@ -82,29 +82,49 @@ export class PochiRepository {
       questions = [...INITIAL_QUESTIONS];
     }
 
+    // Deduplicate any legacy duplicate clues stored in AsyncStorage
+    const seenClues = new Set<string>();
+    const deduplicated: Question[] = [];
+    for (const q of questions) {
+      const key = q.clue_text.trim().toLowerCase();
+      if (!seenClues.has(key)) {
+        seenClues.add(key);
+        deduplicated.push(q);
+      }
+    }
+    questions = deduplicated;
+
     // Ensure bundled J! Archive clues are integrated
     const existingIds = new Set(questions.map((q) => q.id));
     let hasNewClues = false;
     BUNDLED_JARCHIVE_CLUES.forEach((clue, idx) => {
       const converted = TriviaApiClient.convertJArchiveToQuestion(clue, idx);
-      if (!existingIds.has(converted.id)) {
+      const key = converted.clue_text.trim().toLowerCase();
+      if (!seenClues.has(key) && !existingIds.has(converted.id)) {
         questions.push(converted);
+        seenClues.add(key);
         existingIds.add(converted.id);
         hasNewClues = true;
       }
     });
 
-    // If Supabase is configured, pull questions in background
+    // If Supabase is configured, pull randomized questions across the 1000+ question dataset
     if (SupabaseService.isConfigured()) {
-      SupabaseService.fetchQuestions({ limit: 30 })
+      const initialOffset = Math.floor(Math.random() * 900);
+      SupabaseService.fetchQuestions({ limit: 50, offset: initialOffset })
         .then((remoteQuestions) => {
           if (remoteQuestions.length > 0 && this.questionsCache) {
             let remoteAdded = 0;
             const currentIds = new Set(this.questionsCache.map((q) => q.id));
+            const currentClues = new Set(
+              this.questionsCache.map((q) => q.clue_text.trim().toLowerCase())
+            );
             for (const rq of remoteQuestions) {
-              if (!currentIds.has(rq.id)) {
+              const clueKey = rq.clue_text.trim().toLowerCase();
+              if (!currentIds.has(rq.id) && !currentClues.has(clueKey)) {
                 this.questionsCache.push(rq);
                 currentIds.add(rq.id);
+                currentClues.add(clueKey);
                 remoteAdded++;
               }
             }
@@ -266,21 +286,89 @@ export class PochiRepository {
     const questions = await this.getQuestions();
     const profile = await this.getProfile();
 
-    let candidatePool = questions.filter((q) => !excludeIds.includes(q.id));
+    const normalizedExcludes = new Set(excludeIds.map((x) => x.trim().toLowerCase()));
+
+    let candidatePool = questions.filter(
+      (q) =>
+        !normalizedExcludes.has(q.id.toLowerCase()) &&
+        !normalizedExcludes.has(q.clue_text.trim().toLowerCase())
+    );
     if (categoryFilter !== 'all') {
       candidatePool = candidatePool.filter((q) => q.category === categoryFilter);
     }
 
-    // If candidate pool is running low, proactively prefetch
-    if (candidatePool.length <= 2) {
-      this.syncExternalQuestions(categoryFilter, 5).catch(() => {});
+    // Proactively pull fresh questions from Supabase if candidate pool is running low
+    if (candidatePool.length <= 25 && SupabaseService.isConfigured()) {
+      try {
+        // Random offset across the Supabase questions table (1000+ questions in geography/all)
+        const isBroad = categoryFilter === 'geography' || categoryFilter === 'all';
+        const maxOffset = isBroad ? 950 : 0;
+        const randomOffset = maxOffset > 0 ? Math.floor(Math.random() * maxOffset) : 0;
+        const remoteQuestions = await SupabaseService.fetchQuestions({
+          category: categoryFilter,
+          limit: 30,
+          offset: randomOffset,
+        });
+
+        if (remoteQuestions.length > 0) {
+          const currentIds = new Set(questions.map((q) => q.id));
+          const currentClues = new Set(
+            questions.map((q) => q.clue_text.trim().toLowerCase())
+          );
+          let added = false;
+          for (const rq of remoteQuestions) {
+            const clueKey = rq.clue_text.trim().toLowerCase();
+            if (!currentIds.has(rq.id) && !currentClues.has(clueKey)) {
+              questions.push(rq);
+              currentIds.add(rq.id);
+              currentClues.add(clueKey);
+              added = true;
+            }
+            // Always feed into candidate pool if not already excluded or queued
+            if (
+              !normalizedExcludes.has(rq.id.toLowerCase()) &&
+              !normalizedExcludes.has(clueKey) &&
+              !candidatePool.some((c) => c.id === rq.id)
+            ) {
+              candidatePool.push(rq);
+            }
+          }
+          if (added) {
+            this.questionsCache = questions;
+            this.saveQuestions(questions).catch(() => {});
+          }
+        }
+      } catch (e) {
+        console.warn('[Repository] Supabase getNextQuestion prefetch error:', e);
+      }
     }
 
+    // Fallback if candidate pool is completely exhausted
     if (candidatePool.length === 0) {
-      candidatePool =
+      const categoryQuestions =
         categoryFilter === 'all'
           ? questions
           : questions.filter((q) => q.category === categoryFilter);
+
+      // Exclude recently served questions
+      const recentExcludes = new Set(
+        excludeIds.slice(-30).map((x) => x.trim().toLowerCase())
+      );
+      candidatePool = categoryQuestions.filter(
+        (q) =>
+          !recentExcludes.has(q.id.toLowerCase()) &&
+          !recentExcludes.has(q.clue_text.trim().toLowerCase())
+      );
+
+      if (candidatePool.length === 0) {
+        const lastServedId = excludeIds[excludeIds.length - 1]?.toLowerCase();
+        candidatePool = categoryQuestions.filter(
+          (q) => q.id.toLowerCase() !== lastServedId
+        );
+        if (candidatePool.length === 0) {
+          candidatePool = categoryQuestions;
+        }
+      }
     }
 
     const targetElo =

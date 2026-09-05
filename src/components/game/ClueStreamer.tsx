@@ -7,6 +7,7 @@ interface ClueStreamerProps {
   fullText: string;
   isStreaming: boolean;
   isFrozen: boolean;
+  isPaused?: boolean;
   onProgressUpdate?: (ratio: number) => void;
   onStreamComplete?: () => void;
 }
@@ -20,11 +21,13 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   fullText,
   isStreaming,
   isFrozen,
+  isPaused = false,
   onProgressUpdate,
   onStreamComplete,
 }) => {
   const [revealedChars, setRevealedChars] = useState<number>(1);
   const timerRef = useRef<any>(null);
+  const lastReportedRatio = useRef<number>(0);
 
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
@@ -34,15 +37,21 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   // Reset to first character when question text changes
   useEffect(() => {
     setRevealedChars(1);
+    lastReportedRatio.current = 0;
     if (fullText.length > 0) {
-      onProgressUpdateRef.current?.(1 / fullText.length);
+      const initialRatio = 1 / fullText.length;
+      lastReportedRatio.current = initialRatio;
+      onProgressUpdateRef.current?.(initialRatio);
     }
   }, [fullText]);
 
   // Smooth per-letter interval ticker
   useEffect(() => {
-    if (!isStreaming || isFrozen) {
-      if (timerRef.current) clearInterval(timerRef.current);
+    if (!isStreaming || isFrozen || isPaused) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
       return;
     }
 
@@ -50,7 +59,10 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
     timerRef.current = setInterval(() => {
       setRevealedChars((prev) => {
         if (prev >= fullText.length) {
-          if (timerRef.current) clearInterval(timerRef.current);
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
           return prev;
         }
         const next = prev + 1;
@@ -63,16 +75,26 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
     }, 28);
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [fullText.length, isStreaming, isFrozen]);
+  }, [fullText.length, isStreaming, isFrozen, isPaused]);
 
-  // Notify parent component on progress update
+  // Notify parent component on progress update with throttled ratio changes
   useEffect(() => {
     if (fullText.length > 0) {
       const ratio = Math.min(1, revealedChars / fullText.length);
-      onProgressUpdateRef.current?.(ratio);
-      if (revealedChars >= fullText.length && isStreaming && !isFrozen) {
+      const diff = Math.abs(ratio - lastReportedRatio.current);
+      const isComplete = revealedChars >= fullText.length;
+
+      if (diff >= 0.04 || isComplete) {
+        lastReportedRatio.current = ratio;
+        onProgressUpdateRef.current?.(ratio);
+      }
+
+      if (isComplete && isStreaming && !isFrozen) {
         onStreamCompleteRef.current?.();
       }
     }
@@ -86,7 +108,7 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
     <View style={styles.container}>
       <Text style={styles.clueText}>
         <Text style={styles.visiblePart}>{visibleText}</Text>
-        {isStreaming && !isFrozen && revealedChars < fullText.length && (
+        {isStreaming && !isFrozen && !isPaused && revealedChars < fullText.length && (
           <Text style={styles.cursor}> ▌</Text>
         )}
       </Text>

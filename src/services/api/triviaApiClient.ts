@@ -485,7 +485,7 @@ export class TriviaApiClient {
       `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanAnswer)}`;
 
     return {
-      id: clue.id || `jarchive-${Date.now()}-${index}`,
+      id: clue.id || `jarchive-bundle-${index}`,
       category,
       clue_text: clue.question,
       answer: clue.answer,

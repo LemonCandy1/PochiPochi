@@ -93,6 +93,7 @@ export class SupabaseService {
   public static async fetchQuestions(params: {
     category?: Category | 'all';
     limit?: number;
+    offset?: number;
   }): Promise<Question[]> {
     if (!this.isConfigured()) return [];
 
@@ -104,7 +105,14 @@ export class SupabaseService {
         query = query.eq('category', params.category);
       }
 
-      const { data, error } = await query.limit(params.limit || 20);
+      const limit = params.limit || 20;
+      if (typeof params.offset === 'number' && params.offset > 0) {
+        query = query.range(params.offset, params.offset + limit - 1);
+      } else {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
 
       if (error || !data) {
         console.warn('[Supabase] Failed to fetch questions:', error);

@@ -11,7 +11,7 @@ interface AnswerSelectionProps {
   disabled?: boolean;
 }
 
-export const AnswerSelection: React.FC<AnswerSelectionProps> = ({
+export const AnswerSelection = React.memo<AnswerSelectionProps>(({
   options,
   selectedAnswer,
   correctAnswer,
@@ -57,7 +57,7 @@ export const AnswerSelection: React.FC<AnswerSelectionProps> = ({
       })}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   gridContainer: {

@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Flame, Settings } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -48,32 +48,69 @@ export default function PlayScreen() {
   const [reportModalVisible, setReportModalVisible] = useState<boolean>(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState<boolean>(false);
   const [revealedIndices, setRevealedIndices] = useState<number[]>([]);
+  const [isScreenFocused, setIsScreenFocused] = useState<boolean>(true);
+  const [isLoadingNext, setIsLoadingNext] = useState<boolean>(false);
 
+  const scrollViewRef = useRef<ScrollView>(null);
   const currentRatioRef = useRef<number>(0);
   const servedHistory = useRef<string[]>([]);
 
-  // Load profile and initial question
+  // Silence all trivia sounds and pause streaming ticker when navigating away from this tab
+  useFocusEffect(
+    useCallback(() => {
+      setIsScreenFocused(true);
+      AudioHaptics.resume();
+
+      return () => {
+        setIsScreenFocused(false);
+        // Immediately silence all active buzzes, audio tones, and haptics
+        AudioHaptics.stopAll();
+      };
+    }, [])
+  );
+
+  // Sync AudioHaptics enabled state with user profile setting
+  useEffect(() => {
+    if (profile) {
+      AudioHaptics.setEnabled(profile.sound_enabled !== false);
+    }
+  }, [profile?.sound_enabled]);
+
+  // Load profile and next question
   const loadNextQuestion = useCallback(async () => {
-    setGameState('streaming');
-    setSelectedAnswer(null);
-    setIsCorrect(false);
-    setEloResult(null);
-    setCurrentSpeedMult(2.0);
-    currentRatioRef.current = 0;
-    setRevealedIndices([]);
+    try {
+      setIsLoadingNext(true);
 
-    const user = await PochiRepository.getProfile();
-    setProfile(user);
+      const user = await PochiRepository.getProfile();
+      setProfile(user);
 
-    const question = await PochiRepository.getNextQuestion(
-      activeCategory,
-      servedHistory.current
-    );
-    servedHistory.current.push(question.id);
-    setCurrentQuestion(question);
+      const question = await PochiRepository.getNextQuestion(
+        activeCategory,
+        servedHistory.current
+      );
+      servedHistory.current.push(question.id);
+      servedHistory.current.push(question.clue_text.trim().toLowerCase());
 
-    const bookmarked = await PochiRepository.isBookmarked(question.id);
-    setIsBookmarked(bookmarked);
+      // Scroll immediately back to top before mounting the new question
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+
+      // Synchronously commit the new question & start streaming
+      setCurrentQuestion(question);
+      setSelectedAnswer(null);
+      setIsCorrect(false);
+      setEloResult(null);
+      setCurrentSpeedMult(2.0);
+      currentRatioRef.current = 0;
+      setRevealedIndices([]);
+      setGameState('streaming');
+
+      const bookmarked = await PochiRepository.isBookmarked(question.id);
+      setIsBookmarked(bookmarked);
+    } catch (e) {
+      console.warn('Error loading next question:', e);
+    } finally {
+      setIsLoadingNext(false);
+    }
   }, [activeCategory]);
 
   useEffect(() => {
@@ -81,22 +118,32 @@ export default function PlayScreen() {
   }, [loadNextQuestion]);
 
   // Handle progressive word reveal ratio update: recalculate dynamic speed multiplier
-  const handleProgressUpdate = useCallback((ratio: number) => {
-    currentRatioRef.current = ratio;
-    const speedMult = getSpeedMultiplier(ratio);
-    setCurrentSpeedMult(speedMult);
+  const handleProgressUpdate = useCallback(
+    (ratio: number) => {
+      currentRatioRef.current = ratio;
+      const speedMult = getSpeedMultiplier(ratio);
 
-    if (gameState !== 'streaming' || !currentQuestion) return;
+      // Throttle speedMult state updates to reduce re-render thrashing
+      setCurrentSpeedMult((prev) => {
+        if (Math.abs(prev - speedMult) >= 0.05 || ratio >= 1.0) {
+          return speedMult;
+        }
+        return prev;
+      });
 
-    // Strategic letter reveals in answer mask if user hasn't answered yet
-    const cleanAnswer = currentQuestion.answer.replace(/\s+/g, '');
-    if (ratio >= 0.40 && cleanAnswer.length > 3) {
-      setRevealedIndices((prev) => (prev.length === 0 ? [0] : prev));
-    }
-    if (ratio >= 0.75 && cleanAnswer.length > 5) {
-      setRevealedIndices((prev) => (prev.length <= 1 ? [0, cleanAnswer.length - 1] : prev));
-    }
-  }, [gameState, currentQuestion]);
+      if (gameState !== 'streaming' || !currentQuestion) return;
+
+      // Strategic letter reveals in answer mask if user hasn't answered yet
+      const cleanAnswer = currentQuestion.answer.replace(/\s+/g, '');
+      if (ratio >= 0.40 && cleanAnswer.length > 3) {
+        setRevealedIndices((prev) => (prev.length === 0 ? [0] : prev));
+      }
+      if (ratio >= 0.75 && cleanAnswer.length > 5) {
+        setRevealedIndices((prev) => (prev.length <= 1 ? [0, cleanAnswer.length - 1] : prev));
+      }
+    },
+    [gameState, currentQuestion]
+  );
 
   // Stream completion: words have all revealed, multiplier drops to base 1.0x
   const handleStreamComplete = useCallback(() => {
@@ -105,69 +152,77 @@ export default function PlayScreen() {
   }, []);
 
   // Answer selection: immediate 4-option response during or after word stream
-  const handleSelectAnswer = async (answerOption: string) => {
-    if (gameState !== 'streaming' || !currentQuestion || !profile) return;
+  const handleSelectAnswer = useCallback(
+    async (answerOption: string) => {
+      if (gameState !== 'streaming' || !currentQuestion || !profile) return;
 
-    // Freeze streaming and capture speed ratio immediately
-    setGameState('resolved');
-    setSelectedAnswer(answerOption);
-    const correct =
-      answerOption.toUpperCase() === currentQuestion.answer.toUpperCase();
-    setIsCorrect(correct);
+      // Freeze streaming and capture speed ratio immediately
+      setGameState('resolved');
+      setSelectedAnswer(answerOption);
+      const correct =
+        answerOption.toUpperCase() === currentQuestion.answer.toUpperCase();
+      setIsCorrect(correct);
 
-    if (correct) {
-      AudioHaptics.playCorrect();
-    } else {
-      AudioHaptics.playIncorrect();
-    }
+      if (correct) {
+        AudioHaptics.playCorrect();
+      } else {
+        AudioHaptics.playIncorrect();
+      }
 
-    const answerRatio = currentRatioRef.current;
-    const categoryElo =
-      profile.category_elos[currentQuestion.category] ?? profile.overall_elo;
+      const answerRatio = currentRatioRef.current;
+      const categoryElo =
+        profile.category_elos[currentQuestion.category] ?? profile.overall_elo;
 
-    // Dual-sided Elo Calculation factoring in speed multiplier
-    const eloCalc = calculateDualElo({
-      playerElo: categoryElo,
-      questionElo: currentQuestion.elo_rating,
-      isCorrect: correct,
-      buzzProgressRatio: answerRatio,
-    });
-    setEloResult(eloCalc);
+      // Dual-sided Elo Calculation factoring in speed multiplier
+      const eloCalc = calculateDualElo({
+        playerElo: categoryElo,
+        questionElo: currentQuestion.elo_rating,
+        isCorrect: correct,
+        buzzProgressRatio: answerRatio,
+      });
+      setEloResult(eloCalc);
 
-    // Update Profile
-    const newStreak = correct ? profile.current_streak + 1 : 0;
-    const bestStreak = Math.max(newStreak, profile.best_streak);
-    const newCategoryElos = {
-      ...profile.category_elos,
-      [currentQuestion.category]: eloCalc.playerEloAfter,
-    };
+      // Update Profile
+      const newStreak = correct ? profile.current_streak + 1 : 0;
+      const bestStreak = Math.max(newStreak, profile.best_streak);
+      const newCategoryElos = {
+        ...profile.category_elos,
+        [currentQuestion.category]: eloCalc.playerEloAfter,
+      };
 
-    const allValues = Object.values(newCategoryElos);
-    const overallElo = Math.round(
-      allValues.reduce((a, b) => a + b, 0) / allValues.length
-    );
+      const allValues = Object.values(newCategoryElos);
+      const overallElo = Math.round(
+        allValues.reduce((a, b) => a + b, 0) / allValues.length
+      );
 
-    const updatedProfile: UserProfile = {
-      ...profile,
-      overall_elo: overallElo,
-      category_elos: newCategoryElos,
-      total_played: profile.total_played + 1,
-      total_correct: profile.total_correct + (correct ? 1 : 0),
-      current_streak: newStreak,
-      best_streak: bestStreak,
-    };
+      const updatedProfile: UserProfile = {
+        ...profile,
+        overall_elo: overallElo,
+        category_elos: newCategoryElos,
+        total_played: profile.total_played + 1,
+        total_correct: profile.total_correct + (correct ? 1 : 0),
+        current_streak: newStreak,
+        best_streak: bestStreak,
+      };
 
-    setProfile(updatedProfile);
-    await PochiRepository.saveProfile(updatedProfile);
+      setProfile(updatedProfile);
+      await PochiRepository.saveProfile(updatedProfile);
 
-    // Update Question's internal Elo & play stats
-    await PochiRepository.updateQuestion({
-      ...currentQuestion,
-      elo_rating: eloCalc.questionEloAfter,
-      times_served: currentQuestion.times_served + 1,
-      times_correct: currentQuestion.times_correct + (correct ? 1 : 0),
-    });
-  };
+      // Smoothly bring resolution card and Next Question into full view
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 150);
+
+      // Update Question's internal Elo & play stats
+      await PochiRepository.updateQuestion({
+        ...currentQuestion,
+        elo_rating: eloCalc.questionEloAfter,
+        times_served: currentQuestion.times_served + 1,
+        times_correct: currentQuestion.times_correct + (correct ? 1 : 0),
+      });
+    },
+    [gameState, currentQuestion, profile]
+  );
 
   const handleToggleBookmark = async () => {
     if (!currentQuestion) return;
@@ -224,6 +279,7 @@ export default function PlayScreen() {
       </View>
 
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -246,6 +302,7 @@ export default function PlayScreen() {
         {/* Answer Mask Slots (Optional based on user options toggle) */}
         {profile.show_letter_count !== false && (
           <AnswerMask
+            key={`mask-${currentQuestion.id}`}
             answer={currentQuestion.answer}
             revealedIndices={revealedIndices}
             showFullAnswer={gameState === 'resolved'}
@@ -254,9 +311,11 @@ export default function PlayScreen() {
 
         {/* Sequential Word Streamer (Reveals words sequentially with NO ghost text) */}
         <ClueStreamer
+          key={currentQuestion.id}
           fullText={currentQuestion.clue_text}
           isStreaming={gameState === 'streaming'}
           isFrozen={gameState === 'resolved'}
+          isPaused={!isScreenFocused}
           onProgressUpdate={handleProgressUpdate}
           onStreamComplete={handleStreamComplete}
         />
@@ -293,6 +352,7 @@ export default function PlayScreen() {
 
         {/* Classic 4-Option Multiple Choice Grid (Directly interactive while streaming) */}
         <AnswerSelection
+          key={`ans-${currentQuestion.id}`}
           options={currentQuestion.options}
           selectedAnswer={selectedAnswer}
           correctAnswer={currentQuestion.answer}
@@ -308,6 +368,7 @@ export default function PlayScreen() {
             isCorrect={isCorrect}
             eloResult={eloResult}
             isBookmarked={isBookmarked}
+            isLoadingNext={isLoadingNext}
             onToggleBookmark={handleToggleBookmark}
             onOpenReport={() => setReportModalVisible(true)}
             onNextQuestion={loadNextQuestion}
@@ -431,7 +492,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 24,
+    paddingBottom: 100,
   },
   stageMascotRow: {
     flexDirection: 'row',
