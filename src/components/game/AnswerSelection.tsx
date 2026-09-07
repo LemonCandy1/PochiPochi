@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../theme/colors';
+import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 
 interface AnswerSelectionProps {
   options: string[];
@@ -39,8 +40,23 @@ export const AnswerSelection = React.memo<AnswerSelectionProps>(({
               pressed && !isResolved && styles.buttonPressed,
             ]}
           >
-            <View style={styles.badgeIndex}>
-              <Text style={styles.badgeText}>{String.fromCharCode(65 + idx)}</Text>
+            <View
+              style={[
+                styles.badgeIndex,
+                isSelected && styles.badgeIndexSelected,
+                isResolved && isCorrect && styles.badgeIndexCorrect,
+                isResolved && isSelected && !isCorrect && styles.badgeIndexIncorrect,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  isSelected && styles.badgeTextSelected,
+                  isResolved && isCorrect && styles.badgeTextCorrect,
+                ]}
+              >
+                {String.fromCharCode(65 + idx)}
+              </Text>
             </View>
             <Text
               style={[
@@ -72,24 +88,21 @@ const styles = StyleSheet.create({
     minHeight: 62,
     borderRadius: 14,
     backgroundColor: Colors.card,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    ...Shadows.card,
   },
   optionButton: {
     backgroundColor: Colors.card,
   },
   buttonPressed: {
-    transform: [{ translateY: 2 }],
+    transform: [{ translateY: 1 }],
     backgroundColor: Colors.primarySubtle,
+    borderColor: Colors.primary,
   },
   buttonSelected: {
     backgroundColor: Colors.primaryLight,
@@ -108,28 +121,48 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
   },
+  badgeIndexSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  badgeIndexCorrect: {
+    backgroundColor: Colors.correct,
+    borderColor: Colors.correct,
+  },
+  badgeIndexIncorrect: {
+    backgroundColor: Colors.incorrect,
+    borderColor: Colors.incorrect,
+  },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontFamily: Fonts.heading,
+    fontSize: 13,
     color: Colors.ink,
+  },
+  badgeTextSelected: {
+    color: '#FFFFFF',
+  },
+  badgeTextCorrect: {
+    color: '#FFFFFF',
   },
   optionText: {
     flex: 1,
+    fontFamily: Fonts.body,
     fontSize: 14,
-    fontWeight: '700',
     color: Colors.ink,
+    lineHeight: 18,
   },
   textCorrect: {
-    color: '#15803D',
-    fontWeight: '800',
+    fontFamily: Fonts.bodyBold,
+    color: Colors.correct,
   },
   textIncorrect: {
-    color: '#B91C1C',
+    fontFamily: Fonts.bodyBold,
+    color: Colors.incorrect,
   },
 });

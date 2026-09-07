@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Flame, Settings } from 'lucide-react-native';
+import { Flame, Settings, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
@@ -13,7 +13,10 @@ import { AnswerMask } from '../../src/components/game/AnswerMask';
 import { AnswerSelection } from '../../src/components/game/AnswerSelection';
 import { ClueStreamer } from '../../src/components/game/ClueStreamer';
 import { ResolutionCard } from '../../src/components/game/ResolutionCard';
-import { SpeedLightningIcon } from '../../src/components/icons/CategoryIcons';
+import {
+  CategoryIcon,
+  SpeedLightningIcon,
+} from '../../src/components/icons/CategoryIcons';
 import {
   AudienceCrowd,
   PochiLabrador,
@@ -22,7 +25,8 @@ import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
 import { ReportModal } from '../../src/components/modal/ReportModal';
 import { PochiRepository } from '../../src/data/repository';
 import { calculateDualElo, getSpeedMultiplier } from '../../src/engine/eloEngine';
-import { Colors } from '../../src/theme/colors';
+import { Colors, Shadows } from '../../src/theme/colors';
+import { Fonts } from '../../src/theme/typography';
 import {
   Category,
   EloChangeResult,
@@ -252,10 +256,23 @@ export default function PlayScreen() {
       <View style={styles.topGameBar}>
         <View style={styles.leftCluster}>
           <View style={styles.categoryBadge}>
+            <CategoryIcon category={currentQuestion.category} size={14} color={Colors.primaryDark} />
             <Text style={styles.categoryBadgeText}>
               {currentQuestion.category.toUpperCase()}
             </Text>
           </View>
+          {currentQuestion.difficulty_tier && (
+            <View style={styles.introTierBadge}>
+              <Sparkles size={11} color={Colors.gold} />
+              <Text style={styles.introTierBadgeText}>
+                {currentQuestion.difficulty_tier === 'extremely_easy'
+                  ? 'LEVEL 1'
+                  : currentQuestion.difficulty_tier === 'very_easy'
+                  ? 'LEVEL 2'
+                  : 'LEVEL 3'}
+              </Text>
+            </View>
+          )}
           <Pressable
             onPress={() => setOptionsModalVisible(true)}
             style={({ pressed }) => [
@@ -269,7 +286,7 @@ export default function PlayScreen() {
 
         <View style={styles.topScoreCluster}>
           <View style={styles.streakTag}>
-            <Flame size={15} color="#EF4444" fill="#EF4444" />
+            <Flame size={15} color={Colors.gold} fill={Colors.gold} />
             <Text style={styles.streakNum}>{profile.current_streak}</Text>
           </View>
           <View style={styles.eloTag}>
@@ -302,20 +319,18 @@ export default function PlayScreen() {
         {/* Answer Mask Slots (Optional based on user options toggle) */}
         {profile.show_letter_count !== false && (
           <AnswerMask
-            key={`mask-${currentQuestion.id}`}
             answer={currentQuestion.answer}
-            revealedIndices={revealedIndices}
             showFullAnswer={gameState === 'resolved'}
           />
         )}
 
-        {/* Sequential Word Streamer (Reveals words sequentially with NO ghost text) */}
+        {/* Dynamic Smooth Clue Streamer */}
         <ClueStreamer
           key={currentQuestion.id}
           fullText={currentQuestion.clue_text}
           isStreaming={gameState === 'streaming'}
           isFrozen={gameState === 'resolved'}
-          isPaused={!isScreenFocused}
+          isPaused={!isScreenFocused || optionsModalVisible || reportModalVisible}
           onProgressUpdate={handleProgressUpdate}
           onStreamComplete={handleStreamComplete}
         />
@@ -330,7 +345,7 @@ export default function PlayScreen() {
           >
             <SpeedLightningIcon
               size={13}
-              color={currentSpeedMult > 1.4 ? '#B45309' : Colors.inkSecondary}
+              color={currentSpeedMult > 1.4 ? Colors.gold : Colors.inkSecondary}
             />
             <Text
               style={[
@@ -432,17 +447,37 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     backgroundColor: Colors.cardSubtle,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   categoryBadgeText: {
+    fontFamily: Fonts.heading,
     fontSize: 11,
-    fontWeight: '900',
     color: Colors.primaryDark,
     letterSpacing: 1,
+  },
+  introTierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.goldLight,
+    borderWidth: 1,
+    borderColor: '#F5C189',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  introTierBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    color: Colors.goldDark,
+    letterSpacing: 0.5,
   },
   topScoreCluster: {
     flexDirection: 'row',
@@ -452,40 +487,41 @@ const styles = StyleSheet.create({
   streakTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1.5,
-    borderColor: '#FCA5A5',
+    backgroundColor: Colors.goldLight,
+    borderWidth: 1,
+    borderColor: '#F5C189',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     gap: 4,
   },
   streakNum: {
+    fontFamily: Fonts.mono,
     fontSize: 12,
-    fontWeight: '900',
-    color: '#B91C1C',
+    color: Colors.goldDark,
   },
   eloTag: {
     backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   eloTagText: {
+    fontFamily: Fonts.mono,
     fontSize: 12,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   settingsBtn: {
     backgroundColor: Colors.card,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderRadius: 8,
-    padding: 5,
+    padding: 6,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.card,
   },
   scrollView: {
     flex: 1,
@@ -504,19 +540,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.card,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     padding: 10,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    elevation: 2,
+    ...Shadows.card,
   },
   speechText: {
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
+    fontFamily: Fonts.body,
+    fontSize: 13,
+    lineHeight: 19,
     color: Colors.ink,
   },
   speedBarRow: {
@@ -532,28 +564,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
   },
   speedPillHigh: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: Colors.goldLight,
+    borderColor: Colors.gold,
   },
   speedPillText: {
+    fontFamily: Fonts.mono,
     fontSize: 11,
-    fontWeight: '800',
     color: Colors.inkSecondary,
     letterSpacing: 0.5,
   },
   speedPillTextHigh: {
-    color: '#92400E',
+    color: Colors.goldDark,
   },
   speedHintText: {
+    fontFamily: Fonts.body,
     fontSize: 11,
-    fontWeight: '600',
     color: Colors.inkSecondary,
   },
   audienceSection: {

@@ -8,6 +8,7 @@ import {
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Colors } from '../../src/theme/colors';
+import { Fonts } from '../../src/theme/typography';
 
 export default function TabLayout() {
   return (
@@ -80,20 +81,20 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.card,
-    borderTopWidth: 2,
-    borderTopColor: Colors.borderDark,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
     height: 64,
     paddingBottom: 8,
     paddingTop: 6,
     shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 8,
   },
   tabBarLabel: {
+    fontFamily: Fonts.heading,
     fontSize: 11,
-    fontWeight: '800',
     letterSpacing: 0.5,
   },
   iconWrapper: {
@@ -105,11 +106,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     padding: 4,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
   },
   playWrapperActive: {
     backgroundColor: Colors.primary,
-    borderColor: Colors.borderDark,
+    borderColor: Colors.primaryDark,
   },
 });

@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 import { PochiRepository } from '../../data/repository';
-import { Colors } from '../../theme/colors';
+import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 import { ReportReason } from '../../types';
 
 interface ReportModalProps {
@@ -141,14 +142,10 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     backgroundColor: Colors.card,
     borderRadius: 20,
-    borderWidth: 2.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 20,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 6,
+    ...Shadows.cardElevated,
   },
   header: {
     flexDirection: 'row',
@@ -157,14 +154,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 18,
-    fontWeight: '900',
     color: Colors.ink,
   },
   closeBtn: {
     padding: 4,
   },
   subtitle: {
+    fontFamily: Fonts.body,
     fontSize: 13,
     color: Colors.inkSecondary,
     marginBottom: 14,
@@ -179,7 +177,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 10,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     backgroundColor: Colors.backgroundSecondary,
   },
@@ -200,18 +198,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   reasonText: {
+    fontFamily: Fonts.body,
     fontSize: 13,
-    fontWeight: '600',
     color: Colors.ink,
     flex: 1,
   },
   reasonTextActive: {
+    fontFamily: Fonts.bodyBold,
     color: Colors.primaryDark,
-    fontWeight: '700',
   },
   input: {
+    fontFamily: Fonts.body,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: 10,
     padding: 10,
@@ -225,18 +224,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 0,
     alignItems: 'center',
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    ...Shadows.card,
   },
   submitBtnText: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '900',
     color: '#FFFFFF',
   },
   submittedContainer: {
@@ -245,12 +239,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   submittedText: {
+    fontFamily: Fonts.heading,
     fontSize: 16,
-    fontWeight: '900',
     color: Colors.ink,
     marginTop: 4,
   },
   submittedSub: {
+    fontFamily: Fonts.body,
     fontSize: 13,
     color: Colors.inkSecondary,
     textAlign: 'center',

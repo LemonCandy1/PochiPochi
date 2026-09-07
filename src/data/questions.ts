@@ -1,4 +1,4 @@
-import { CategoryInfo, Question } from '../types';
+import { Category, CategoryInfo, Question } from '../types';
 
 export const CATEGORIES: CategoryInfo[] = [
   {
@@ -220,3 +220,266 @@ export const INITIAL_QUESTIONS: Question[] = [
     times_correct: 0,
   },
 ];
+
+/**
+ * Curated First-Time User Experience (FTUE) Placement Questions
+ * Exactly 3 progressive questions per category:
+ * 1. Extremely Easy (Universal, entry-level, accessible)
+ * 2. Very Easy (Broadly familiar staple)
+ * 3. Medium (Engaging benchmark trivia)
+ * All with verified Wikipedia articles and educational context summaries.
+ * Special category: 'introductory'.
+ */
+export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
+  science: [
+    {
+      id: 'ftue-sci-1',
+      category: 'science',
+      clue_text:
+        'Positioned at the gravitational center of our Solar System, this glowing yellow dwarf star accounts for over 99.8% of the system\'s total mass and radiates the vital light and heat that sustains life on Earth.',
+      answer: 'SUN',
+      answer_mask_length: 3,
+      options: ['SUN', 'MOON', 'MARS', 'JUPITER'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Sun',
+      context_summary:
+        'The Sun is the star at the center of the Solar System. It is an almost perfect sphere of hot plasma, powered by nuclear fusion of hydrogen into helium in its core.',
+      elo_rating: 850,
+      difficulty_tier: 'extremely_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-sci-2',
+      category: 'science',
+      clue_text:
+        'Famously conceptualized by Sir Isaac Newton upon observing a falling apple in his Woolsthorpe garden, this universal fundamental force pulls objects with mass toward one another.',
+      answer: 'GRAVITY',
+      answer_mask_length: 7,
+      options: ['GRAVITY', 'MAGNETISM', 'FRICTION', 'INERTIA'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Gravity',
+      context_summary:
+        'Gravity is a fundamental interaction that causes mutual attraction between all things that have mass. On Earth, gravity gives weight to physical objects.',
+      elo_rating: 1050,
+      difficulty_tier: 'very_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-sci-3',
+      category: 'science',
+      clue_text:
+        'Accidentally isolated in 1928 by Scottish bacteriologist Alexander Fleming after blue-green mold contaminated a staphylococcus culture, this revolutionary breakthrough became the world\'s first clinical antibiotic.',
+      answer: 'PENICILLIN',
+      answer_mask_length: 10,
+      options: ['PENICILLIN', 'AMOXICILLIN', 'STREPTOMYCIN', 'ASPIRIN'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Penicillin',
+      context_summary:
+        'Penicillin revolutionized modern medicine by curing previously fatal bacterial infections. Fleming was awarded the 1945 Nobel Prize in Physiology or Medicine for its discovery.',
+      elo_rating: 1250,
+      difficulty_tier: 'medium',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+  ],
+
+  geography: [
+    {
+      id: 'ftue-geo-1',
+      category: 'geography',
+      clue_text:
+        'Home to the iconic wrought-iron Eiffel Tower, the historic Notre-Dame cathedral, and the world-renowned Louvre museum along the Seine River, this City of Light is the capital of France.',
+      answer: 'PARIS',
+      answer_mask_length: 5,
+      options: ['PARIS', 'LONDON', 'ROME', 'BERLIN'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Paris',
+      context_summary:
+        'Paris is the capital of France and has stood as one of the world\'s major centers of art, fashion, gastronomy, and culture since the 17th century.',
+      elo_rating: 850,
+      difficulty_tier: 'extremely_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-geo-2',
+      category: 'geography',
+      clue_text:
+        'Flowing northward through eleven African countries including Egypt, Sudan, and Uganda before emptying into the Mediterranean Sea, this legendary desert waterway is widely celebrated as the world\'s longest river.',
+      answer: 'NILE',
+      answer_mask_length: 4,
+      options: ['NILE', 'AMAZON', 'DANUBE', 'THAMES'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Nile',
+      context_summary:
+        'The Nile River provided fresh water, irrigation, and fertile soil indispensable for the rise of ancient Egyptian civilization over five millennia ago.',
+      elo_rating: 1050,
+      difficulty_tier: 'very_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-geo-3',
+      category: 'geography',
+      clue_text:
+        'Straddling the international boundary between Nepal and China within the Mahalangur Himal ridge of the Himalayas, this soaring summit stands as the highest point on Earth above sea level at 8,848.86 meters.',
+      answer: 'EVEREST',
+      answer_mask_length: 7,
+      options: ['EVEREST', 'K2', 'KILIMANJARO', 'MONT BLANC'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Mount_Everest',
+      context_summary:
+        'Mount Everest attracts mountaineers from across the globe. Known in Nepal as Sagarmatha and in Tibet as Chomolungma, it was first officially summited by Edmund Hillary and Tenzing Norgay in 1953.',
+      elo_rating: 1250,
+      difficulty_tier: 'medium',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+  ],
+
+  anime: [
+    {
+      id: 'ftue-ani-1',
+      category: 'anime',
+      clue_text:
+        'Serving as the yellow electric mouse companion to trainer Ash Ketchum across decades of Pokémon adventures, this world-famous mascot stores lightning in its crimson cheek pouches and repeats its own cheerful name.',
+      answer: 'PIKACHU',
+      answer_mask_length: 7,
+      options: ['PIKACHU', 'CHARIZARD', 'SQUIRTLE', 'EEVEE'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Pikachu',
+      context_summary:
+        'Pikachu is the central mascot of the Pokémon franchise and is widely regarded as one of the most recognizable animated characters in modern history.',
+      elo_rating: 850,
+      difficulty_tier: 'extremely_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-ani-2',
+      category: 'anime',
+      clue_text:
+        'Penned by Masashi Kishimoto, this spirited young ninja in an orange tracksuit from the Hidden Leaf Village relentlessly strives to gain the respect of his peers and achieve his lifelong dream of becoming the Hokage.',
+      answer: 'NARUTO',
+      answer_mask_length: 6,
+      options: ['NARUTO', 'SASUKE', 'KAKASHI', 'LUFFY'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Naruto',
+      context_summary:
+        'Naruto is one of the best-selling manga series of all time, chronicling the journey of Naruto Uzumaki, a host for the powerful Nine-Tailed Fox spirit.',
+      elo_rating: 1050,
+      difficulty_tier: 'very_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-ani-3',
+      category: 'anime',
+      clue_text:
+        'Directed by Hayao Miyazaki and created by Studio Ghibli, this enchanting 2001 animated triumph follows 10-year-old Chihiro into an otherworldly bathhouse for spirits, earning the Academy Award for Best Animated Feature.',
+      answer: 'SPIRITED AWAY',
+      answer_mask_length: 12,
+      options: ['SPIRITED AWAY', 'PRINCESS MONONOKE', 'MY NEIGHBOR TOTORO', 'HOWL\'S MOVING CASTLE'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Spirited_Away',
+      context_summary:
+        'Spirited Away is universally celebrated as a pinnacle of cinematic animation and remains the only hand-drawn, non-English-language film to win the Oscar for Best Animated Feature.',
+      elo_rating: 1250,
+      difficulty_tier: 'medium',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+  ],
+
+  general: [
+    {
+      id: 'ftue-gen-1',
+      category: 'general',
+      clue_text:
+        'Masterfully painted in Florence by Renaissance luminary Leonardo da Vinci in the early 16th century, this Louvre portrait of Lisa Gherardini is admired across the globe for her subtle and enigmatic smile.',
+      answer: 'MONA LISA',
+      answer_mask_length: 8,
+      options: ['MONA LISA', 'THE SCREAM', 'STARRY NIGHT', 'THE LAST SUPPER'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Mona_Lisa',
+      context_summary:
+        'The Mona Lisa is an archetype of Italian High Renaissance portraiture. It has been described as the best-known, most-visited, and most-written-about work of art in human history.',
+      elo_rating: 850,
+      difficulty_tier: 'extremely_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-gen-2',
+      category: 'general',
+      clue_text:
+        'Constructed on the Giza plateau as grand royal burial monuments for the pharaohs Khufu, Khafre, and Menkaure, these massive limestone tombs represent the oldest and sole surviving wonder of the ancient world.',
+      answer: 'PYRAMIDS',
+      answer_mask_length: 8,
+      options: ['PYRAMIDS', 'COLOSSEUM', 'PARTHENON', 'STONEHENGE'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Giza_pyramid_complex',
+      context_summary:
+        'The Great Pyramid of Giza was built over 4,500 years ago during the Fourth Dynasty of the Old Kingdom of Egypt and remained the tallest human-made structure for over 3,800 years.',
+      elo_rating: 1050,
+      difficulty_tier: 'very_easy',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+    {
+      id: 'ftue-gen-3',
+      category: 'general',
+      clue_text:
+        'Venerated as England\'s national poet and the Bard of Avon, this legendary dramatist composed 39 plays including Hamlet, Romeo and Juliet, Othello, and Macbeth for London\'s historic Globe Theatre.',
+      answer: 'SHAKESPEARE',
+      answer_mask_length: 11,
+      options: ['SHAKESPEARE', 'CHARLES DICKENS', 'HOMER', 'MARK TWAIN'],
+      wikipedia_url: 'https://en.wikipedia.org/wiki/William_Shakespeare',
+      context_summary:
+        'William Shakespeare is widely regarded as the greatest playwright in world literature. His works explore the complete spectrum of human emotion and have been translated into every major living language.',
+      elo_rating: 1250,
+      difficulty_tier: 'medium',
+      is_ftue_placement: true,
+      is_introductory: true,
+      special_category: 'introductory',
+      times_served: 0,
+      times_correct: 0,
+    },
+  ],
+};
+
+export const ALL_FTUE_QUESTIONS: Question[] = [
+  ...FTUE_PLACEMENT_QUESTIONS.science,
+  ...FTUE_PLACEMENT_QUESTIONS.geography,
+  ...FTUE_PLACEMENT_QUESTIONS.anime,
+  ...FTUE_PLACEMENT_QUESTIONS.general,
+];
+
+export const INTRODUCTORY_QUESTIONS = FTUE_PLACEMENT_QUESTIONS;
+export const ALL_INTRODUCTORY_QUESTIONS = ALL_FTUE_QUESTIONS;
+
+

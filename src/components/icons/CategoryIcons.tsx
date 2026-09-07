@@ -182,7 +182,7 @@ export const RankScholarBearIcon: React.FC<IconProps> = ({
 // Smart Pup Icon
 export const RankSmartPupIcon: React.FC<IconProps> = ({
   size = 24,
-  color = '#D97706',
+  color = Colors.gold,
 }) => (
   <Svg width={size} height={size} viewBox="0 0 32 32" fill="none">
     {/* Head */}
@@ -218,7 +218,7 @@ export const RankCuriousNoviceIcon: React.FC<IconProps> = ({
  */
 export const SpeedLightningIcon: React.FC<IconProps> = ({
   size = 14,
-  color = '#D97706',
+  color = Colors.gold,
 }) => (
   <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
     <Polygon points="9,1 2,9 8,9 7,15 14,7 8,7" fill={color} stroke={Colors.ink} strokeWidth="1" strokeLinejoin="round" />
@@ -230,7 +230,7 @@ export const SpeedLightningIcon: React.FC<IconProps> = ({
  */
 export const StreakFlameIcon: React.FC<IconProps> = ({
   size = 14,
-  color = '#EF4444',
+  color = Colors.gold,
 }) => (
   <Svg width={size} height={size} viewBox="0 0 16 16" fill="none">
     <Path
@@ -262,6 +262,29 @@ export const RankBadgeIcon: React.FC<{
     case 'novice':
     default:
       return <RankCuriousNoviceIcon size={size} />;
+  }
+};
+
+/**
+ * Unified Helper to render the appropriate Category Icon
+ */
+export const CategoryIcon: React.FC<{
+  category: string;
+  size?: number;
+  color?: string;
+}> = ({ category, size = 32, color }) => {
+  switch (category?.toLowerCase()) {
+    case 'science':
+      return <ScienceCategoryIcon size={size} color={color} />;
+    case 'geography':
+      return <GeographyCategoryIcon size={size} color={color} />;
+    case 'anime':
+    case 'anime & manga':
+      return <AnimeCategoryIcon size={size} color={color} />;
+    case 'general':
+    case 'general knowledge':
+    default:
+      return <GeneralKnowledgeCategoryIcon size={size} color={color} />;
   }
 };
 

@@ -1,4 +1,6 @@
+import '../../utils/cryptoPolyfill';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bookmark, Category, Question, UserProfile } from '../../types';
 
 /**
@@ -50,8 +52,11 @@ export class SupabaseService {
         SUPABASE_ANON_KEY;
       supabaseInstance = createClient(url, key, {
         auth: {
-          persistSession: false,
-          autoRefreshToken: false,
+          storage: AsyncStorage,
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: false,
+          flowType: 'pkce',
         },
       });
     }

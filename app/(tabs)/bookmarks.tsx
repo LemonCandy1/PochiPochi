@@ -11,7 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PochiLabrador } from '../../src/components/mascot/MascotVectors';
 import { PochiRepository } from '../../src/data/repository';
-import { Colors } from '../../src/theme/colors';
+import { Colors, Shadows } from '../../src/theme/colors';
+import { Fonts } from '../../src/theme/typography';
 import { Bookmark } from '../../src/types';
 
 export default function BookmarksScreen() {
@@ -120,13 +121,13 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 22,
-    fontWeight: '900',
     color: Colors.ink,
   },
   subtitle: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '800',
     color: Colors.primaryDark,
     letterSpacing: 1.5,
     marginTop: 2,
@@ -139,12 +140,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 18,
-    fontWeight: '900',
     color: Colors.ink,
     marginTop: 10,
   },
   emptySub: {
+    fontFamily: Fonts.body,
     fontSize: 13,
     color: Colors.inkSecondary,
     textAlign: 'center',
@@ -157,14 +159,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 16,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2.5, height: 2.5 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    ...Shadows.card,
   },
   cardTop: {
     flexDirection: 'row',
@@ -181,20 +179,21 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   categoryPillText: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   removeBtn: {
     padding: 4,
   },
   answerText: {
+    fontFamily: Fonts.bodyBold,
     fontSize: 18,
-    fontWeight: '900',
     color: Colors.primaryDark,
     marginBottom: 6,
   },
   clueSnippet: {
+    fontFamily: Fonts.body,
     fontSize: 13,
     lineHeight: 18,
     color: Colors.ink,
@@ -209,6 +208,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   summaryText: {
+    fontFamily: Fonts.body,
     fontSize: 12,
     lineHeight: 17,
     color: Colors.inkSecondary,
@@ -219,15 +219,15 @@ const styles = StyleSheet.create({
     gap: 6,
     alignSelf: 'flex-start',
     backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
   wikiBtnText: {
+    fontFamily: Fonts.heading,
     fontSize: 12,
-    fontWeight: '800',
     color: Colors.primaryDark,
   },
   buttonPressed: {

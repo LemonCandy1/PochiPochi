@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Bookmark, Category, Question, QuestionReport, ReportReason, UserProfile } from '../types';
-import { INITIAL_QUESTIONS } from './questions';
+import { Bookmark, Category, FTUESessionState, Question, QuestionReport, ReportReason, UserProfile } from '../types';
+import { INITIAL_QUESTIONS, ALL_INTRODUCTORY_QUESTIONS, INTRODUCTORY_QUESTIONS } from './questions';
 import { BUNDLED_JARCHIVE_CLUES, TriviaApiClient } from '../services/api/triviaApiClient';
 import { SupabaseService } from '../services/supabase/supabaseClient';
 
@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   QUESTIONS: '@pochipochi_questions_v1',
   BOOKMARKS: '@pochipochi_bookmarks_v1',
   REPORTS: '@pochipochi_reports_v1',
+  FTUE_COMPLETED: '@pochipochi_ftue_completed_v1',
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -104,6 +105,17 @@ export class PochiRepository {
         questions.push(converted);
         seenClues.add(key);
         existingIds.add(converted.id);
+        hasNewClues = true;
+      }
+    });
+
+    // Ensure all 12 special introductory placement questions are always present
+    ALL_INTRODUCTORY_QUESTIONS.forEach((introQ) => {
+      const key = introQ.clue_text.trim().toLowerCase();
+      if (!seenClues.has(key) && !existingIds.has(introQ.id)) {
+        questions.push(introQ);
+        seenClues.add(key);
+        existingIds.add(introQ.id);
         hasNewClues = true;
       }
     });
@@ -287,6 +299,20 @@ export class PochiRepository {
     const profile = await this.getProfile();
 
     const normalizedExcludes = new Set(excludeIds.map((x) => x.trim().toLowerCase()));
+
+    // Prioritize serving the special introductory 3-question sequence (extremely easy -> very easy -> medium)
+    // for players encountering this category for the first time
+    if (categoryFilter !== 'all') {
+      const introQuestions = INTRODUCTORY_QUESTIONS[categoryFilter] || [];
+      for (const introQ of introQuestions) {
+        if (
+          !normalizedExcludes.has(introQ.id.toLowerCase()) &&
+          !normalizedExcludes.has(introQ.clue_text.trim().toLowerCase())
+        ) {
+          return introQ;
+        }
+      }
+    }
 
     let candidatePool = questions.filter(
       (q) =>
@@ -528,5 +554,79 @@ export class PochiRepository {
       ...item,
       rank: idx + 1,
     }));
+  }
+
+  static async hasCompletedFTUE(): Promise<boolean> {
+    try {
+      const val = await AsyncStorage.getItem(STORAGE_KEYS.FTUE_COMPLETED);
+      return val === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  static async completeFTUE(
+    session: FTUESessionState,
+    authMethod: 'apple' | 'google' | 'guest'
+  ): Promise<UserProfile> {
+    try {
+      const current = await this.getProfile();
+      const updated: UserProfile = {
+        ...current,
+        username:
+          authMethod === 'apple'
+            ? 'PochiChampion'
+            : authMethod === 'google'
+            ? 'PochiScholar'
+            : current.username,
+        avatar: session.selectedCompanion,
+        overall_elo: session.calibratedElo,
+        category_elos: {
+          ...current.category_elos,
+          [session.selectedCategory]: session.calibratedElo,
+        },
+        current_streak: 1,
+        best_streak: Math.max(current.best_streak, 1),
+        total_played: current.total_played + session.completedQuestions.length,
+        total_correct:
+          current.total_correct +
+          session.completedQuestions.filter((q) => q.wasCorrect).length,
+        has_completed_ftue: true,
+      };
+
+      await this.saveProfile(updated);
+      await AsyncStorage.setItem(STORAGE_KEYS.FTUE_COMPLETED, 'true');
+
+      // Save the completed FTUE questions into knowledge notebook
+      for (const item of session.completedQuestions) {
+        const fullQ = (await this.getQuestions()).find(
+          (q) => q.id === item.questionId
+        );
+        if (fullQ) {
+          await this.toggleBookmark(fullQ);
+        }
+      }
+
+      return updated;
+    } catch (e) {
+      console.warn('Failed to complete FTUE', e);
+      return await this.getProfile();
+    }
+  }
+
+  static async resetFTUE(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.FTUE_COMPLETED);
+    } catch (e) {
+      console.warn('Failed to reset FTUE', e);
+    }
+  }
+
+  static async getFTUEQuestions(category: Category): Promise<Question[]> {
+    return INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
+  }
+
+  static async getIntroductoryQuestions(category: Category): Promise<Question[]> {
+    return INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
   }
 }

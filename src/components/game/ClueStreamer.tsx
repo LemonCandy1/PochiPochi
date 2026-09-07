@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../theme/colors';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 import { AudioHaptics } from '../../utils/audioHaptics';
 
 interface ClueStreamerProps {
@@ -16,6 +17,7 @@ interface ClueStreamerProps {
  * Smooth Per-Letter Clue Streamer
  * Sequentially streams the question letter by letter with fluid cadence.
  * Future characters are completely hidden with no ghost text or placeholders.
+ * Adds rhythmic breathing pulsation while the question is active.
  */
 export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   fullText,
@@ -28,11 +30,44 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   const [revealedChars, setRevealedChars] = useState<number>(1);
   const timerRef = useRef<any>(null);
   const lastReportedRatio = useRef<number>(0);
+  const pulseAnim = useRef(new Animated.Value(0)).current;
 
   const onProgressUpdateRef = useRef(onProgressUpdate);
   onProgressUpdateRef.current = onProgressUpdate;
   const onStreamCompleteRef = useRef(onStreamComplete);
   onStreamCompleteRef.current = onStreamComplete;
+
+  // Pulsation animation during active question streaming
+  useEffect(() => {
+    if (isStreaming && !isFrozen && !isPaused) {
+      const pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 900,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 0,
+            duration: 900,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseLoop.start();
+      return () => {
+        pulseLoop.stop();
+      };
+    } else {
+      Animated.timing(pulseAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isStreaming, isFrozen, isPaused]);
 
   // Reset to first character when question text changes
   useEffect(() => {
@@ -101,22 +136,71 @@ export const ClueStreamer: React.FC<ClueStreamerProps> = ({
   }, [revealedChars, fullText.length, isStreaming, isFrozen]);
 
   // When frozen/resolved, display full text. When streaming, display only letters revealed so far.
-  // NO ghost text or placeholders for future characters.
   const visibleText = isFrozen ? fullText : fullText.slice(0, revealedChars);
 
+  const scale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.0, 1.02],
+  });
+
+  const auraOpacity = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.45],
+  });
+
+  const auraScale = pulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1.0, 1.035],
+  });
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.clueText}>
-        <Text style={styles.visiblePart}>{visibleText}</Text>
-        {isStreaming && !isFrozen && !isPaused && revealedChars < fullText.length && (
-          <Text style={styles.cursor}> ▌</Text>
-        )}
-      </Text>
+    <View style={styles.wrapper}>
+      {/* Dynamic Pulsating Glow Aura */}
+      <Animated.View
+        style={[
+          styles.pulsingAura,
+          {
+            opacity: isStreaming && !isFrozen ? auraOpacity : 0,
+            transform: [{ scale: isStreaming && !isFrozen ? auraScale : 1.0 }],
+          },
+        ]}
+      />
+      {/* Main Question Card with Gentle Rhythmic Breathing */}
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            transform: [{ scale: isStreaming && !isFrozen ? scale : 1.0 }],
+          },
+        ]}
+      >
+        <Text style={styles.clueText}>
+          <Text style={styles.visiblePart}>{visibleText}</Text>
+          {isStreaming && !isFrozen && !isPaused && revealedChars < fullText.length && (
+            <Text style={styles.cursor}> ▌</Text>
+          )}
+        </Text>
+      </Animated.View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  pulsingAura: {
+    position: 'absolute',
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
+    backgroundColor: 'rgba(224, 135, 34, 0.12)',
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(224, 135, 34, 0.45)',
+  },
   container: {
     minHeight: 120,
     justifyContent: 'center',
@@ -124,25 +208,22 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: Colors.card,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    ...Shadows.card,
   },
   clueText: {
+    fontFamily: Fonts.body,
     fontSize: 17,
     lineHeight: 26,
-    fontWeight: '600',
     color: Colors.ink,
   },
   visiblePart: {
+    fontFamily: Fonts.body,
     color: Colors.ink,
   },
   cursor: {
+    fontFamily: Fonts.heading,
     color: Colors.primary,
-    fontWeight: '800',
   },
 });

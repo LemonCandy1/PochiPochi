@@ -4,6 +4,7 @@ import {
   ExternalLink,
   Flag,
   Share2,
+  Sparkles,
 } from 'lucide-react-native';
 import React from 'react';
 import {
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 import { SpeedLightningIcon } from '../icons/CategoryIcons';
 import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 import { EloChangeResult, Question } from '../../types';
 
 interface ResolutionCardProps {
@@ -85,7 +87,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
           </Text>
           {eloResult.speedMultiplier > 1.2 && (
             <View style={styles.speedBonusRow}>
-              <SpeedLightningIcon size={12} color="#D97706" />
+              <SpeedLightningIcon size={12} color={Colors.gold} />
               <Text style={styles.speedBonusTag}>
                 {eloResult.speedMultiplier}x Speed
               </Text>
@@ -93,6 +95,20 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
           )}
         </View>
       </View>
+
+      {/* Dynamic Special Introductory Category Banner */}
+      {question.difficulty_tier && (
+        <View style={styles.introCategoryBanner}>
+          <Sparkles size={13} color="#B45309" />
+          <Text style={styles.introCategoryBannerText}>
+            {question.difficulty_tier === 'extremely_easy'
+              ? 'SPECIAL INTRODUCTORY • LEVEL 1: EXTREMELY EASY'
+              : question.difficulty_tier === 'very_easy'
+              ? 'SPECIAL INTRODUCTORY • LEVEL 2: VERY EASY'
+              : 'SPECIAL INTRODUCTORY • LEVEL 3: MEDIUM'}
+          </Text>
+        </View>
+      )}
 
       {/* Answer reveal */}
       <View style={styles.answerSection}>
@@ -168,15 +184,11 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
     borderRadius: 20,
-    borderWidth: 2.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 16,
     marginVertical: 10,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    ...Shadows.cardElevated,
   },
   topRow: {
     flexDirection: 'row',
@@ -199,15 +211,15 @@ const styles = StyleSheet.create({
     borderColor: Colors.incorrect,
   },
   statusText: {
+    fontFamily: Fonts.heading,
     fontSize: 12,
-    fontWeight: '900',
     letterSpacing: 0.5,
   },
   statusTextCorrect: {
-    color: '#15803D',
+    color: Colors.correct,
   },
   statusTextIncorrect: {
-    color: '#B91C1C',
+    color: Colors.incorrect,
   },
   eloDeltaPill: {
     paddingHorizontal: 10,
@@ -225,14 +237,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.incorrect,
   },
   eloDeltaText: {
+    fontFamily: Fonts.mono,
     fontSize: 13,
-    fontWeight: '900',
   },
   eloTextPositive: {
-    color: '#15803D',
+    color: Colors.correct,
   },
   eloTextNegative: {
-    color: '#B91C1C',
+    color: Colors.incorrect,
   },
   speedBonusRow: {
     flexDirection: 'row',
@@ -241,24 +253,24 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   speedBonusTag: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#D97706',
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.gold,
   },
   answerSection: {
     marginBottom: 10,
   },
   answerLabel: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontFamily: Fonts.heading,
+    fontSize: 11,
     letterSpacing: 1,
     color: Colors.inkSecondary,
   },
   answerText: {
+    fontFamily: Fonts.bodyBold,
     fontSize: 20,
-    fontWeight: '900',
     color: Colors.primaryDark,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   summaryBox: {
     backgroundColor: Colors.backgroundSecondary,
@@ -269,10 +281,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   summaryText: {
+    fontFamily: Fonts.body,
     fontSize: 13,
     lineHeight: 19,
     color: Colors.ink,
-    fontWeight: '500',
+  },
+  introCategoryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.goldLight,
+    borderWidth: 1,
+    borderColor: '#F5C189',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 10,
+  },
+  introCategoryBannerText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.goldDark,
+    letterSpacing: 0.5,
   },
   wikiButton: {
     flexDirection: 'row',
@@ -288,8 +318,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   wikiButtonText: {
+    fontFamily: Fonts.bodyBold,
     fontSize: 14,
-    fontWeight: '800',
     color: Colors.primaryDark,
   },
   footerRow: {
@@ -306,7 +336,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderColor: Colors.border,
     backgroundColor: Colors.cardSubtle,
     justifyContent: 'center',
     alignItems: 'center',
@@ -320,15 +350,14 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 20,
     borderRadius: 12,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.card,
   },
   nextButtonText: {
-    fontSize: 14,
-    fontWeight: '900',
+    fontFamily: Fonts.heading,
+    fontSize: 15,
     color: '#FFFFFF',
   },
   buttonPressed: {

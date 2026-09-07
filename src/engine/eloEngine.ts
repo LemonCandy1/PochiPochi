@@ -77,9 +77,9 @@ export function getEloRankTier(elo: number): {
   badgeId: RankBadgeId;
   color: string;
 } {
-  if (elo >= 2000) return { tier: 'Grandmaster Owl', badgeId: 'owl', color: '#1D4ED8' };
+  if (elo >= 2000) return { tier: 'Grandmaster Owl', badgeId: 'owl', color: '#00009F' };
   if (elo >= 1700) return { tier: 'Trivia Master Cat', badgeId: 'cat', color: '#7C3AED' };
   if (elo >= 1500) return { tier: 'Scholar Bear', badgeId: 'bear', color: '#059669' };
-  if (elo >= 1300) return { tier: 'Smart Pup', badgeId: 'pup', color: '#D97706' };
+  if (elo >= 1300) return { tier: 'Smart Pup', badgeId: 'pup', color: '#E08722' };
   return { tier: 'Curious Novice', badgeId: 'novice', color: '#64748B' };
 }

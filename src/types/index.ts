@@ -8,6 +8,9 @@ export interface CategoryInfo {
   description: string;
 }
 
+export type DifficultyTier = 'extremely_easy' | 'very_easy' | 'medium';
+export type SpecialCategory = 'introductory' | 'standard';
+
 export interface Question {
   id: string;
   category: Category;
@@ -21,7 +24,13 @@ export interface Question {
   times_served: number;
   times_correct: number;
   is_flagged?: boolean;
+  difficulty_tier?: DifficultyTier;
+  is_ftue_placement?: boolean;
+  is_introductory?: boolean;
+  special_category?: SpecialCategory;
 }
+
+export type CompanionType = 'dog' | 'bear' | 'bunny' | 'owl';
 
 export interface UserProfile {
   id: string;
@@ -35,6 +44,25 @@ export interface UserProfile {
   best_streak: number;
   show_letter_count?: boolean;
   sound_enabled?: boolean;
+  has_completed_ftue?: boolean;
+}
+
+export interface FTUESessionState {
+  guestId: string;
+  selectedCompanion: CompanionType;
+  selectedCategory: Category;
+  calibratedElo: number;
+  sessionStreak: number;
+  completedQuestions: {
+    questionId: string;
+    questionText: string;
+    answer: string;
+    wasCorrect: boolean;
+    interruptSpeedMs: number;
+    wikiUrl: string;
+    contextSummary: string;
+    difficultyTier?: DifficultyTier;
+  }[];
 }
 
 export interface EloChangeResult {

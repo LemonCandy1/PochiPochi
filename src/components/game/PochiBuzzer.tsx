@@ -6,7 +6,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Colors } from '../../theme/colors';
+import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 import { AudioHaptics } from '../../utils/audioHaptics';
 
 interface PochiBuzzerProps {
@@ -92,16 +93,11 @@ const styles = StyleSheet.create({
     width: 146,
     height: 146,
     borderRadius: 73,
-    backgroundColor: '#0F2557',
+    backgroundColor: Colors.primaryDark,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: Colors.ink,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 0,
-    elevation: 8,
+    borderWidth: 0,
+    ...Shadows.buzzer,
   },
   animatedWrapper: {
     width: 140,
@@ -113,8 +109,7 @@ const styles = StyleSheet.create({
     height: 136,
     borderRadius: 68,
     backgroundColor: Colors.primary,
-    borderWidth: 3,
-    borderColor: Colors.ink,
+    borderWidth: 0,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -136,24 +131,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   japaneseText: {
+    fontFamily: Fonts.heading,
     fontSize: 22,
-    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   englishText: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '800',
     color: '#E0E7FF',
     letterSpacing: 2,
   },
   buzzerSublabel: {
+    fontFamily: Fonts.heading,
     marginTop: 10,
     fontSize: 11,
-    fontWeight: '800',
     color: Colors.inkSecondary,
     letterSpacing: 1,
   },

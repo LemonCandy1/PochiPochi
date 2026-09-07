@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/fredoka": "^0.4.1",
+    "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo-google-fonts/space-mono": "^0.4.2",
     "@expo/metro-runtime": "~57.0.15",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.115.0",
@@ -10,6 +13,7 @@
     "expo": "~57.0.20",
     "expo-av": "^16.0.8",
     "expo-constants": "~57.0.17",
+    "expo-font": "^57.0.3",
     "expo-haptics": "~57.0.2",
     "expo-linking": "~57.0.9",
     "expo-router": "~57.0.19",

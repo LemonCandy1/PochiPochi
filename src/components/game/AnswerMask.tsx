@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 
 interface AnswerMaskProps {
   answer: string;
@@ -90,8 +91,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   slotText: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontFamily: Fonts.mono,
+    fontSize: 16,
     color: Colors.inkMuted,
     lineHeight: 22,
   },
@@ -99,9 +100,9 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
   },
   hintLabel: {
+    fontFamily: Fonts.mono,
     marginTop: 6,
     fontSize: 11,
-    fontWeight: '700',
     color: Colors.inkSecondary,
     letterSpacing: 1.2,
   },

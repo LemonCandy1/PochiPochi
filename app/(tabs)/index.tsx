@@ -8,7 +8,6 @@ import {
   Play,
   RefreshCw,
   Settings,
-  Sparkles,
   Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -22,17 +21,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PochiLabrador } from '../../src/components/mascot/MascotVectors';
 import {
-  AnimeCategoryIcon,
-  GeneralKnowledgeCategoryIcon,
-  GeographyCategoryIcon,
+  CategoryIcon,
   RankBadgeIcon,
-  ScienceCategoryIcon,
   StreakFlameIcon,
 } from '../../src/components/icons/CategoryIcons';
 import { CATEGORIES } from '../../src/data/questions';
 import { PochiRepository } from '../../src/data/repository';
 import { getEloRankTier } from '../../src/engine/eloEngine';
-import { Colors } from '../../src/theme/colors';
+import { Colors, Shadows } from '../../src/theme/colors';
+import { Fonts } from '../../src/theme/typography';
 import { Category, UserProfile } from '../../src/types';
 import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
 
@@ -170,38 +167,24 @@ export default function HomeScreen() {
           </View>
         </Pressable>
 
-        {/* Categories Section (2x2 grid from prototype) */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Select Category</Text>
-          <Text style={styles.sectionJapanese}>EXPLORE</Text>
-        </View>
 
+        {/* Categories */}
         <View style={styles.categoryGrid}>
-          {CATEGORIES.map((cat) => {
-            const elo = profile?.category_elos[cat.id] ?? 1200;
-            return (
-              <Pressable
-                key={cat.id}
-                onPress={() => handleStartGame(cat.id)}
-                style={({ pressed }) => [
-                  styles.categoryCard,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <View style={styles.catIconCircle}>
-                  {cat.id === 'science' && <ScienceCategoryIcon size={34} />}
-                  {cat.id === 'geography' && <GeographyCategoryIcon size={34} />}
-                  {cat.id === 'anime' && <AnimeCategoryIcon size={34} />}
-                  {cat.id === 'general' && <GeneralKnowledgeCategoryIcon size={34} />}
-                </View>
-                <Text style={styles.catTitle}>{cat.label}</Text>
-                <Text style={styles.catJapanese}>{cat.themeTag}</Text>
-                <View style={styles.catEloRow}>
-                  <Text style={styles.catEloText}>{elo} ELO</Text>
-                </View>
-              </Pressable>
-            );
-          })}
+          {CATEGORIES.map((cat) => (
+            <Pressable
+              key={cat.id}
+              onPress={() => handleStartGame(cat.id)}
+              style={({ pressed }) => [
+                styles.categoryCard,
+                pressed && styles.categoryCardPressed,
+              ]}
+            >
+              <View style={styles.catIconCircle}>
+                <CategoryIcon category={cat.id} size={36} />
+              </View>
+              <Text style={styles.catTitle}>{cat.label}</Text>
+            </Pressable>
+          ))}
         </View>
 
         {/* Bulk Dataset Connection Card (J! Archive & TriviaQA) */}
@@ -305,14 +288,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   appTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 26,
-    fontWeight: '900',
     color: Colors.ink,
     letterSpacing: -0.5,
   },
   appSubtitle: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '800',
     letterSpacing: 1.5,
     color: Colors.primaryDark,
     marginTop: 2,
@@ -327,26 +310,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     alignItems: 'center',
+    ...Shadows.card,
   },
   eloNumber: {
+    fontFamily: Fonts.mono,
     fontSize: 14,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   eloText: {
+    fontFamily: Fonts.mono,
     fontSize: 8,
-    fontWeight: '800',
     color: Colors.inkSecondary,
   },
   avatarCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
@@ -356,27 +340,23 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     backgroundColor: Colors.card,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Shadows.card,
   },
   dailyCard: {
     backgroundColor: Colors.primary,
     borderRadius: 20,
-    borderWidth: 2.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 0,
     padding: 18,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginVertical: 10,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    ...Shadows.cardElevated,
   },
   dailyLeft: {
     flex: 1,
@@ -394,20 +374,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dailyBadgeText: {
+    fontFamily: Fonts.heading,
     fontSize: 9,
-    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 1,
   },
   dailyHeadline: {
+    fontFamily: Fonts.heading,
     fontSize: 18,
-    fontWeight: '900',
     color: '#FFFFFF',
     lineHeight: 22,
   },
   dailySub: {
+    fontFamily: Fonts.body,
     fontSize: 12,
-    color: '#DBEAFE',
+    color: Colors.primaryLight,
     marginTop: 4,
     marginBottom: 12,
   },
@@ -420,12 +401,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 8,
     gap: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 0,
+    ...Shadows.card,
   },
   dailyButtonText: {
+    fontFamily: Fonts.heading,
     fontSize: 12,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   dailyClockBox: {
@@ -433,40 +414,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
     padding: 12,
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   clockIconCircle: {
     marginBottom: 4,
   },
   timerText: {
+    fontFamily: Fonts.mono,
     fontSize: 14,
-    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: 1,
   },
   timerLabel: {
+    fontFamily: Fonts.mono,
     fontSize: 8,
-    fontWeight: '800',
-    color: '#BFDBFE',
+    color: Colors.primaryLight,
     letterSpacing: 1,
     marginTop: 2,
   },
   endlessCard: {
     backgroundColor: Colors.card,
     borderRadius: 18,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 16,
     marginVertical: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    ...Shadows.card,
   },
   endlessContent: {
     flexDirection: 'row',
@@ -479,17 +456,18 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   endlessTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 16,
-    fontWeight: '900',
     color: Colors.ink,
   },
   endlessSub: {
+    fontFamily: Fonts.body,
     fontSize: 12,
     color: Colors.inkSecondary,
     marginTop: 2,
@@ -497,87 +475,58 @@ const styles = StyleSheet.create({
   mascotPeek: {
     marginLeft: 6,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginTop: 18,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: Colors.ink,
-  },
-  sectionJapanese: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: Colors.inkSecondary,
-  },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
+    marginTop: 18,
   },
   categoryCard: {
     width: '48%',
     backgroundColor: Colors.card,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
-    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2.5, height: 2.5 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    justifyContent: 'center',
+    gap: 10,
+    ...Shadows.card,
+  },
+  categoryCardPressed: {
+    transform: [{ scale: 0.97 }],
+    opacity: 0.85,
   },
   catIconCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: Colors.cardSubtle,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
   catTitle: {
-    fontSize: 14,
-    fontWeight: '900',
+    fontFamily: Fonts.heading,
+    fontSize: 18,
     color: Colors.ink,
+    textAlign: 'center',
   },
-  catJapanese: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.inkSecondary,
-    marginTop: 1,
-  },
-  catEloRow: {
-    marginTop: 8,
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  catEloText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.primaryDark,
-  },
+
   statusFooter: {
     flexDirection: 'row',
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     padding: 14,
     marginTop: 20,
     justifyContent: 'space-around',
     alignItems: 'center',
+    ...Shadows.card,
   },
   statusCol: {
     alignItems: 'center',
@@ -593,15 +542,15 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statusLabel: {
+    fontFamily: Fonts.heading,
     fontSize: 9,
-    fontWeight: '800',
     color: Colors.inkSecondary,
     letterSpacing: 1,
     marginBottom: 3,
   },
   statusVal: {
+    fontFamily: Fonts.mono,
     fontSize: 15,
-    fontWeight: '900',
     color: Colors.ink,
   },
   statusDivider: {
@@ -615,7 +564,7 @@ const styles = StyleSheet.create({
   datasetCard: {
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.border,
     padding: 14,
     marginTop: 20,
@@ -630,20 +579,20 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 10,
     backgroundColor: Colors.primaryLight,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   datasetTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '800',
     color: Colors.ink,
     letterSpacing: -0.2,
   },
   datasetSub: {
+    fontFamily: Fonts.body,
     fontSize: 11,
-    fontWeight: '500',
     color: Colors.inkSecondary,
     marginTop: 1,
   },
@@ -656,8 +605,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   datasetBadgeText: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '800',
     color: Colors.primaryDark,
     letterSpacing: 0.5,
   },
@@ -673,8 +622,8 @@ const styles = StyleSheet.create({
   },
   datasetStatusText: {
     flex: 1,
+    fontFamily: Fonts.body,
     fontSize: 11,
-    fontWeight: '600',
     color: Colors.inkSecondary,
   },
   datasetSyncButton: {
@@ -692,8 +641,8 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   datasetSyncText: {
+    fontFamily: Fonts.heading,
     fontSize: 11,
-    fontWeight: '700',
     color: Colors.primaryDark,
   },
   syncingText: {

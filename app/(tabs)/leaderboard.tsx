@@ -19,7 +19,8 @@ import {
 } from '../../src/components/icons/CategoryIcons';
 import { PochiRepository } from '../../src/data/repository';
 import { getEloRankTier } from '../../src/engine/eloEngine';
-import { Colors } from '../../src/theme/colors';
+import { Colors, Shadows } from '../../src/theme/colors';
+import { Fonts } from '../../src/theme/typography';
 import { UserProfile } from '../../src/types';
 
 interface LeaderboardEntry {
@@ -151,7 +152,7 @@ export default function LeaderboardScreen() {
                   <Medal size={20} color="#94A3B8" fill="#94A3B8" />
                 )}
                 {item.rank === 3 && (
-                  <Medal size={20} color="#D97706" fill="#D97706" />
+                  <Medal size={20} color={Colors.goldDark} fill={Colors.goldDark} />
                 )}
                 {item.rank > 3 && (
                   <Text style={styles.rankNumberText}>{item.rank}</Text>
@@ -185,7 +186,7 @@ export default function LeaderboardScreen() {
                   {item.username} {item.isCurrentUser && '(You)'}
                 </Text>
                 <View style={styles.streakBadge}>
-                  <Flame size={12} color="#EF4444" fill="#EF4444" />
+                  <Flame size={12} color={Colors.gold} fill={Colors.gold} />
                   <Text style={styles.streakText}>{item.streak} streak</Text>
                 </View>
               </View>
@@ -215,13 +216,13 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 22,
-    fontWeight: '900',
     color: Colors.ink,
   },
   subtitle: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '800',
     color: Colors.primaryDark,
     letterSpacing: 1.5,
     marginTop: 2,
@@ -233,16 +234,11 @@ const styles = StyleSheet.create({
   podiumCard: {
     backgroundColor: Colors.primary,
     borderRadius: 20,
-    borderWidth: 2.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 0,
     padding: 18,
     alignItems: 'center',
     marginBottom: 14,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    ...Shadows.cardElevated,
   },
   crownRow: {
     marginBottom: 6,
@@ -252,22 +248,22 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 36,
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     marginBottom: 8,
   },
   championTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 11,
-    fontWeight: '800',
-    color: '#BFDBFE',
+    color: Colors.primaryLight,
     letterSpacing: 1,
   },
   championName: {
+    fontFamily: Fonts.heading,
     fontSize: 18,
-    fontWeight: '900',
     color: '#FFFFFF',
     marginTop: 2,
   },
@@ -282,42 +278,39 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   championElo: {
+    fontFamily: Fonts.mono,
     fontSize: 13,
-    fontWeight: '900',
     color: '#FFFFFF',
   },
   myStatCard: {
     backgroundColor: Colors.card,
     borderRadius: 16,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 14,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
+    ...Shadows.card,
   },
   myStatLeft: {
     flex: 1,
   },
   myRankBadge: {
+    fontFamily: Fonts.heading,
     fontSize: 9,
-    fontWeight: '800',
     color: Colors.primaryDark,
     letterSpacing: 1,
   },
   myRankTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 16,
-    fontWeight: '900',
     color: Colors.ink,
     marginTop: 2,
   },
   myRankSub: {
+    fontFamily: Fonts.body,
     fontSize: 11,
     color: Colors.inkSecondary,
     marginTop: 4,
@@ -328,25 +321,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: Colors.primary,
   },
   myStatElo: {
+    fontFamily: Fonts.mono,
     fontSize: 18,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   myStatEloLabel: {
+    fontFamily: Fonts.mono,
     fontSize: 8,
-    fontWeight: '800',
     color: Colors.inkSecondary,
   },
   categoryEloSection: {
     marginBottom: 16,
   },
   categoryEloHeader: {
+    fontFamily: Fonts.heading,
     fontSize: 12,
-    fontWeight: '800',
     color: Colors.inkSecondary,
     letterSpacing: 0.5,
     marginBottom: 8,
@@ -359,26 +352,27 @@ const styles = StyleSheet.create({
   catPill: {
     flex: 1,
     backgroundColor: Colors.card,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     borderRadius: 10,
     paddingVertical: 8,
     alignItems: 'center',
+    ...Shadows.card,
   },
   catPillLabel: {
+    fontFamily: Fonts.heading,
     fontSize: 9,
-    fontWeight: '800',
     color: Colors.inkSecondary,
   },
   catPillVal: {
+    fontFamily: Fonts.mono,
     fontSize: 13,
-    fontWeight: '900',
     color: Colors.primaryDark,
     marginTop: 2,
   },
   rosterHeader: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '900',
     color: Colors.ink,
     marginBottom: 6,
   },
@@ -387,15 +381,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: Colors.card,
     borderRadius: 14,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
-    elevation: 2,
+    ...Shadows.card,
   },
   rankRowCurrentUser: {
     backgroundColor: Colors.primaryLight,
@@ -407,8 +397,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   rankNumberText: {
+    fontFamily: Fonts.mono,
     fontSize: 14,
-    fontWeight: '900',
     color: Colors.inkSecondary,
   },
   userAvatar: {
@@ -416,8 +406,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.cardSubtle,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
     marginHorizontal: 10,
@@ -427,13 +417,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userName: {
+    fontFamily: Fonts.heading,
     fontSize: 13,
-    fontWeight: '800',
     color: Colors.ink,
   },
   userNameCurrent: {
     color: Colors.primaryDark,
-    fontWeight: '900',
+    fontFamily: Fonts.heading,
   },
   streakBadge: {
     flexDirection: 'row',
@@ -442,21 +432,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   streakText: {
+    fontFamily: Fonts.mono,
     fontSize: 10,
-    color: Colors.inkSecondary,
-    fontWeight: '700',
+    color: Colors.goldDark,
   },
   eloBox: {
     alignItems: 'flex-end',
   },
   eloScore: {
+    fontFamily: Fonts.mono,
     fontSize: 15,
-    fontWeight: '900',
     color: Colors.primaryDark,
   },
   eloUnit: {
+    fontFamily: Fonts.mono,
     fontSize: 8,
-    fontWeight: '800',
     color: Colors.inkSecondary,
   },
 });

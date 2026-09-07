@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import {
   Check,
   Cloud,
@@ -5,6 +6,7 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
+  Sparkles,
   Volume2,
   VolumeX,
   X,
@@ -18,7 +20,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Colors } from '../../theme/colors';
+import { Colors, Shadows } from '../../theme/colors';
+import { Fonts } from '../../theme/typography';
 import { UserProfile } from '../../types';
 import { SupabaseService } from '../../services/supabase/supabaseClient';
 import { PochiRepository } from '../../data/repository';
@@ -185,6 +188,22 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
             </View>
           </View>
 
+          {/* Test / Replay Onboarding Tour */}
+          <Pressable
+            onPress={async () => {
+              await PochiRepository.resetFTUE();
+              onClose();
+              router.push('/ftue');
+            }}
+            style={({ pressed }) => [
+              styles.replayFtueBtn,
+              pressed && styles.btnPressed,
+            ]}
+          >
+            <Sparkles size={16} color={Colors.primaryDark} />
+            <Text style={styles.replayFtueText}>Test / Replay Onboarding Tour</Text>
+          </Pressable>
+
           {/* Done Button */}
           <Pressable
             onPress={onClose}
@@ -215,14 +234,10 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     backgroundColor: Colors.card,
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     padding: 20,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 6,
+    ...Shadows.cardElevated,
   },
   headerRow: {
     flexDirection: 'row',
@@ -234,8 +249,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
+    fontFamily: Fonts.heading,
     fontSize: 18,
-    fontWeight: '900',
     color: Colors.ink,
     letterSpacing: -0.3,
   },
@@ -255,8 +270,8 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     backgroundColor: Colors.backgroundSecondary,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -264,13 +279,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '800',
     color: Colors.ink,
   },
   optionDescription: {
+    fontFamily: Fonts.body,
     fontSize: 11,
-    fontWeight: '500',
     color: Colors.inkSecondary,
     marginTop: 2,
     lineHeight: 15,
@@ -278,8 +293,8 @@ const styles = StyleSheet.create({
   supabaseCard: {
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: Colors.borderDark,
+    borderWidth: 1,
+    borderColor: Colors.border,
     padding: 12,
     marginTop: 14,
     marginBottom: 16,
@@ -300,13 +315,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   supabaseTitle: {
+    fontFamily: Fonts.heading,
     fontSize: 13,
-    fontWeight: '800',
     color: Colors.ink,
   },
   supabaseSub: {
+    fontFamily: Fonts.body,
     fontSize: 10,
-    fontWeight: '500',
     color: Colors.inkSecondary,
     marginTop: 1,
   },
@@ -322,8 +337,8 @@ const styles = StyleSheet.create({
   },
   supabaseStatusText: {
     flex: 1,
+    fontFamily: Fonts.mono,
     fontSize: 10,
-    fontWeight: '700',
     color: Colors.inkSecondary,
   },
   syncBtn: {
@@ -338,8 +353,25 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   syncBtnText: {
+    fontFamily: Fonts.heading,
     fontSize: 10,
-    fontWeight: '800',
+    color: Colors.primaryDark,
+  },
+  replayFtueBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 12,
+    paddingVertical: 11,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    marginBottom: 10,
+  },
+  replayFtueText: {
+    fontFamily: Fonts.heading,
+    fontSize: 13,
     color: Colors.primaryDark,
   },
   doneButton: {
@@ -350,17 +382,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryDark,
     borderRadius: 12,
     paddingVertical: 12,
-    borderWidth: 2,
-    borderColor: Colors.borderDark,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
+    borderWidth: 0,
+    ...Shadows.card,
   },
   doneButtonText: {
+    fontFamily: Fonts.heading,
     fontSize: 14,
-    fontWeight: '800',
     color: '#FFFFFF',
   },
   btnPressed: {

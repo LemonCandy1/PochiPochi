@@ -1,35 +1,39 @@
 export const Colors = {
-  // Canvas & Backgrounds
-  background: '#FAF7F2',
-  backgroundSecondary: '#F4EFE6',
+  // Canvas Base (Fair Bianca)
+  background: '#F8F5EE',
+  backgroundSecondary: '#F5F0E6',
   card: '#FFFFFF',
-  cardSubtle: '#F9F6F0',
+  cardSubtle: '#F5F0E6',
 
-  // Outlines & Typography
-  ink: '#1B1E28',
-  inkSecondary: '#4B5563',
-  inkMuted: '#9CA3AF',
-  border: '#E5E0D8',
-  borderDark: '#1B1E28',
+  // Anchor / Text (Deep Navy)
+  ink: '#0F172A',
+  inkSecondary: '#334155',
+  inkMuted: '#64748B',
+  border: '#E2DDD2',
+  borderDark: '#0F172A',
 
-  // Primary Pochi Interactive Accent
-  primary: '#1D4ED8',
-  primaryDark: '#1E40AF',
-  primaryLight: '#DBEAFE',
-  primarySubtle: '#EFF6FF',
+  // Focus / Selection (Deep Royal / Electric Blue)
+  primary: '#00009F',
+  primaryDark: '#000075',
+  primaryLight: '#E8E8FC',
+  primarySubtle: '#F0F0FF',
 
-  // Semantic Feedback
-  correct: '#16A34A',
-  correctLight: '#DCFCE7',
-  correctBorder: '#86EFAC',
-  
-  incorrect: '#DC2626',
-  incorrectLight: '#FEE2E2',
-  incorrectBorder: '#FCA5A5',
+  // Semantic Feedback - Success State (Muted Emerald)
+  correct: '#2E7D56',
+  correctLight: '#E8F4EE',
+  correctBorder: '#8ED1AF',
 
-  // Accents & Badges
-  gold: '#F59E0B',
-  goldLight: '#FEF3C7',
+  // Semantic Feedback - Error State (Crimson / Brick)
+  incorrect: '#C24134',
+  incorrectLight: '#FCEBE9',
+  incorrectBorder: '#F1A49C',
+
+  // Competitive Accent (Amber / Burnt Ochre)
+  gold: '#E08722',
+  goldLight: '#FDF2E4',
+  goldDark: '#B86810',
+
+  // Supporting Accent
   purple: '#7C3AED',
   purpleLight: '#EDE9FE',
 };
@@ -46,28 +50,28 @@ export const Spacing = {
 
 export const Shadows = {
   hard: {
-    shadowColor: '#1B1E28',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 2, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 6,
     elevation: 3,
   },
   buzzer: {
-    shadowColor: '#1E3A8A',
+    shadowColor: '#000075',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
   },
   card: {
-    shadowColor: '#1B1E28',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
   cardElevated: {
-    shadowColor: '#1B1E28',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 12,
