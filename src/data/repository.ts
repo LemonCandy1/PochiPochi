@@ -3,6 +3,8 @@ import { Bookmark, Category, FTUESessionState, Question, QuestionReport, ReportR
 import { INITIAL_QUESTIONS, ALL_INTRODUCTORY_QUESTIONS, INTRODUCTORY_QUESTIONS } from './questions';
 import { BUNDLED_JARCHIVE_CLUES, TriviaApiClient } from '../services/api/triviaApiClient';
 import { SupabaseService } from '../services/supabase/supabaseClient';
+import { formatWikipediaUrl } from '../utils/wikipedia';
+import { randomizeQuestionOptions } from '../utils/shuffle';
 
 const STORAGE_KEYS = {
   PROFILE: '@pochipochi_user_profile_v1',
@@ -10,6 +12,7 @@ const STORAGE_KEYS = {
   BOOKMARKS: '@pochipochi_bookmarks_v1',
   REPORTS: '@pochipochi_reports_v1',
   FTUE_COMPLETED: '@pochipochi_ftue_completed_v1',
+  ATTEMPTED_QUESTIONS: '@pochipochi_attempted_questions_v2',
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -35,6 +38,7 @@ export class PochiRepository {
   private static questionsCache: Question[] | null = null;
   private static profileCache: UserProfile | null = null;
   private static bookmarksCache: Bookmark[] | null = null;
+  private static attemptedKeysCache: Set<string> | null = null;
 
   static async getProfile(): Promise<UserProfile> {
     if (this.profileCache) return this.profileCache;
@@ -148,6 +152,12 @@ export class PochiRepository {
         .catch(() => {});
     }
 
+    // Ensure every single question has a verified, proper wikipedia link corresponding to its answer
+    questions = questions.map((q) => ({
+      ...q,
+      wikipedia_url: formatWikipediaUrl(q.answer, q.wikipedia_url),
+    }));
+
     this.questionsCache = questions;
     if (hasNewClues) {
       await this.saveQuestions(this.questionsCache);
@@ -165,15 +175,19 @@ export class PochiRepository {
   }
 
   static async updateQuestion(updated: Question): Promise<void> {
+    const normalized: Question = {
+      ...updated,
+      wikipedia_url: formatWikipediaUrl(updated.answer, updated.wikipedia_url),
+    };
     const questions = await this.getQuestions();
-    const index = questions.findIndex((q) => q.id === updated.id);
+    const index = questions.findIndex((q) => q.id === normalized.id);
     if (index >= 0) {
-      questions[index] = updated;
+      questions[index] = normalized;
       await this.saveQuestions(questions);
 
       // Push updated stats (elo, times served, times correct) to Supabase
       if (SupabaseService.isConfigured()) {
-        SupabaseService.upsertQuestion(updated).catch(() => {});
+        SupabaseService.upsertQuestion(normalized).catch(() => {});
       }
     }
   }
@@ -289,7 +303,124 @@ export class PochiRepository {
   }
 
   /**
-   * Retrieves an adaptive question close to the player's Elo rating
+   * Retrieves persistent set of question IDs and clue texts attempted by the user in the past
+   */
+  static async getAttemptedQuestionKeys(): Promise<Set<string>> {
+    if (this.attemptedKeysCache) return this.attemptedKeysCache;
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.ATTEMPTED_QUESTIONS);
+      if (data) {
+        const parsed: string[] = JSON.parse(data);
+        this.attemptedKeysCache = new Set(parsed.map((k) => k.trim().toLowerCase()));
+        return this.attemptedKeysCache;
+      }
+    } catch (e) {
+      console.warn('Failed to load attempted questions from storage', e);
+    }
+    this.attemptedKeysCache = new Set<string>();
+    return this.attemptedKeysCache;
+  }
+
+  /**
+   * Records a question as tried/attempted so the player never encounters it again
+   */
+  static async recordAttemptedQuestion(questionId: string, clueText?: string): Promise<void> {
+    const keys = await this.getAttemptedQuestionKeys();
+    let modified = false;
+
+    const idKey = questionId.trim().toLowerCase();
+    if (idKey && !keys.has(idKey)) {
+      keys.add(idKey);
+      modified = true;
+    }
+
+    if (clueText) {
+      const clueKey = clueText.trim().toLowerCase();
+      if (clueKey && !keys.has(clueKey)) {
+        keys.add(clueKey);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.ATTEMPTED_QUESTIONS,
+          JSON.stringify([...keys])
+        );
+      } catch (e) {
+        console.warn('Failed to save attempted questions to storage', e);
+      }
+    }
+  }
+
+  /**
+   * Batch records multiple questions as tried/attempted (e.g. after FTUE)
+   */
+  static async recordAttemptedQuestions(
+    items: { questionId: string; clueText?: string }[]
+  ): Promise<void> {
+    const keys = await this.getAttemptedQuestionKeys();
+    let modified = false;
+
+    for (const item of items) {
+      const idKey = item.questionId.trim().toLowerCase();
+      if (idKey && !keys.has(idKey)) {
+        keys.add(idKey);
+        modified = true;
+      }
+      if (item.clueText) {
+        const clueKey = item.clueText.trim().toLowerCase();
+        if (clueKey && !keys.has(clueKey)) {
+          keys.add(clueKey);
+          modified = true;
+        }
+      }
+    }
+
+    if (modified) {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEYS.ATTEMPTED_QUESTIONS,
+          JSON.stringify([...keys])
+        );
+      } catch (e) {
+        console.warn('Failed to batch save attempted questions to storage', e);
+      }
+    }
+  }
+
+  /**
+   * Checks if a question has already been attempted in the past
+   */
+  static async isQuestionAttempted(questionId: string, clueText?: string): Promise<boolean> {
+    const keys = await this.getAttemptedQuestionKeys();
+    const idKey = questionId.trim().toLowerCase();
+    if (keys.has(idKey)) return true;
+    if (clueText) {
+      const clueKey = clueText.trim().toLowerCase();
+      if (keys.has(clueKey)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Resets the player's attempted questions history (useful for testing or profile reset)
+   */
+  static async resetAttemptedQuestions(): Promise<void> {
+    this.attemptedKeysCache = new Set<string>();
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEYS.ATTEMPTED_QUESTIONS);
+    } catch (e) {
+      console.warn('Failed to reset attempted questions', e);
+    }
+  }
+
+  /**
+   * Retrieves an adaptive question close to the player's Elo rating,
+   * guaranteeing:
+   * 1. The user NEVER encounters a question they have already tried in the past.
+   * 2. Multiple choice options are randomized into different positions every time.
    */
   static async getNextQuestion(
     categoryFilter: Category | 'all',
@@ -297,27 +428,39 @@ export class PochiRepository {
   ): Promise<Question> {
     const questions = await this.getQuestions();
     const profile = await this.getProfile();
+    const attemptedKeys = await this.getAttemptedQuestionKeys();
 
-    const normalizedExcludes = new Set(excludeIds.map((x) => x.trim().toLowerCase()));
+    // Unified exclusion set: persistently attempted questions + session-excluded items
+    const allExcludes = new Set<string>();
+    for (const key of attemptedKeys) {
+      allExcludes.add(key);
+    }
+    for (const x of excludeIds) {
+      allExcludes.add(x.trim().toLowerCase());
+    }
 
     // Prioritize serving the special introductory 3-question sequence (extremely easy -> very easy -> medium)
-    // for players encountering this category for the first time
+    // for players encountering this category for the first time, ONLY if not tried before
     if (categoryFilter !== 'all') {
       const introQuestions = INTRODUCTORY_QUESTIONS[categoryFilter] || [];
       for (const introQ of introQuestions) {
         if (
-          !normalizedExcludes.has(introQ.id.toLowerCase()) &&
-          !normalizedExcludes.has(introQ.clue_text.trim().toLowerCase())
+          !allExcludes.has(introQ.id.toLowerCase()) &&
+          !allExcludes.has(introQ.clue_text.trim().toLowerCase())
         ) {
-          return introQ;
+          return {
+            ...introQ,
+            options: randomizeQuestionOptions(introQ.options, introQ.answer),
+            wikipedia_url: formatWikipediaUrl(introQ.answer, introQ.wikipedia_url),
+          };
         }
       }
     }
 
     let candidatePool = questions.filter(
       (q) =>
-        !normalizedExcludes.has(q.id.toLowerCase()) &&
-        !normalizedExcludes.has(q.clue_text.trim().toLowerCase())
+        !allExcludes.has(q.id.toLowerCase()) &&
+        !allExcludes.has(q.clue_text.trim().toLowerCase())
     );
     if (categoryFilter !== 'all') {
       candidatePool = candidatePool.filter((q) => q.category === categoryFilter);
@@ -350,10 +493,10 @@ export class PochiRepository {
               currentClues.add(clueKey);
               added = true;
             }
-            // Always feed into candidate pool if not already excluded or queued
+            // Always feed into candidate pool if not tried and not already queued
             if (
-              !normalizedExcludes.has(rq.id.toLowerCase()) &&
-              !normalizedExcludes.has(clueKey) &&
+              !allExcludes.has(rq.id.toLowerCase()) &&
+              !allExcludes.has(clueKey) &&
               !candidatePool.some((c) => c.id === rq.id)
             ) {
               candidatePool.push(rq);
@@ -376,7 +519,7 @@ export class PochiRepository {
           ? questions
           : questions.filter((q) => q.category === categoryFilter);
 
-      // Exclude recently served questions
+      // Exclude recently served questions from session
       const recentExcludes = new Set(
         excludeIds.slice(-30).map((x) => x.trim().toLowerCase())
       );
@@ -410,7 +553,12 @@ export class PochiRepository {
     const topChoices = candidatePool.slice(0, Math.min(3, candidatePool.length));
     const selected = topChoices[Math.floor(Math.random() * topChoices.length)];
 
-    return selected || questions[0];
+    const targetQ = selected || questions[0];
+    return {
+      ...targetQ,
+      options: randomizeQuestionOptions(targetQ.options, targetQ.answer),
+      wikipedia_url: formatWikipediaUrl(targetQ.answer, targetQ.wikipedia_url),
+    };
   }
 
   static async getBookmarks(): Promise<Bookmark[]> {
@@ -418,7 +566,14 @@ export class PochiRepository {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.BOOKMARKS);
       if (data) {
-        this.bookmarksCache = JSON.parse(data);
+        const parsed: Bookmark[] = JSON.parse(data);
+        this.bookmarksCache = parsed.map((b) => ({
+          ...b,
+          question: {
+            ...b.question,
+            wikipedia_url: formatWikipediaUrl(b.question.answer, b.question.wikipedia_url),
+          },
+        }));
         return this.bookmarksCache!;
       }
     } catch (e) {
@@ -446,10 +601,14 @@ export class PochiRepository {
         SupabaseService.syncBookmark(profile.id, question.id, 'delete').catch(() => {});
       }
     } else {
+      const normalizedQ: Question = {
+        ...question,
+        wikipedia_url: formatWikipediaUrl(question.answer, question.wikipedia_url),
+      };
       bookmarks.unshift({
         question_id: question.id,
         saved_at: new Date().toISOString(),
-        question,
+        question: normalizedQ,
       });
       isSaved = true;
       if (SupabaseService.isConfigured()) {
@@ -607,6 +766,16 @@ export class PochiRepository {
         }
       }
 
+      // Mark all completed FTUE questions as attempted so user never encounters them again
+      if (session.completedQuestions.length > 0) {
+        await this.recordAttemptedQuestions(
+          session.completedQuestions.map((q) => ({
+            questionId: q.questionId,
+            clueText: q.questionText,
+          }))
+        );
+      }
+
       return updated;
     } catch (e) {
       console.warn('Failed to complete FTUE', e);
@@ -623,10 +792,20 @@ export class PochiRepository {
   }
 
   static async getFTUEQuestions(category: Category): Promise<Question[]> {
-    return INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
+    const list = INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
+    return list.map((q) => ({
+      ...q,
+      options: randomizeQuestionOptions(q.options, q.answer),
+      wikipedia_url: formatWikipediaUrl(q.answer, q.wikipedia_url),
+    }));
   }
 
   static async getIntroductoryQuestions(category: Category): Promise<Question[]> {
-    return INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
+    const list = INTRODUCTORY_QUESTIONS[category] ?? INTRODUCTORY_QUESTIONS.geography;
+    return list.map((q) => ({
+      ...q,
+      options: randomizeQuestionOptions(q.options, q.answer),
+      wikipedia_url: formatWikipediaUrl(q.answer, q.wikipedia_url),
+    }));
   }
 }

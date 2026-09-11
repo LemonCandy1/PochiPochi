@@ -135,7 +135,7 @@ export const INITIAL_QUESTIONS: Question[] = [
     answer: 'TOTORO',
     answer_mask_length: 6,
     options: ['TOTORO', 'JIJI', 'NO FACE', 'CALCIFER'],
-    wikipedia_url: 'https://en.wikipedia.org/wiki/My_Neighbor_Totoro',
+    wikipedia_url: 'https://en.wikipedia.org/wiki/Totoro',
     context_summary:
       'Totoro has become the official corporate logo of Studio Ghibli and an enduring icon of Japanese animation worldwide.',
     elo_rating: 1160,
@@ -439,7 +439,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       answer: 'PYRAMIDS',
       answer_mask_length: 8,
       options: ['PYRAMIDS', 'COLOSSEUM', 'PARTHENON', 'STONEHENGE'],
-      wikipedia_url: 'https://en.wikipedia.org/wiki/Giza_pyramid_complex',
+      wikipedia_url: 'https://en.wikipedia.org/wiki/Egyptian_pyramids',
       context_summary:
         'The Great Pyramid of Giza was built over 4,500 years ago during the Fourth Dynasty of the Old Kingdom of Egypt and remained the tallest human-made structure for over 3,800 years.',
       elo_rating: 1050,

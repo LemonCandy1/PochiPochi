@@ -3,6 +3,7 @@ import { BookmarkX, ExternalLink } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import {
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import { PochiRepository } from '../../src/data/repository';
 import { Colors, Shadows } from '../../src/theme/colors';
 import { Fonts } from '../../src/theme/typography';
 import { Bookmark } from '../../src/types';
+import { getHtmlLinkProps, openExternalLink } from '../../src/utils/openLink';
 
 export default function BookmarksScreen() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -33,12 +35,9 @@ export default function BookmarksScreen() {
     loadBookmarks();
   };
 
-  const handleOpenWikipedia = async (url: string) => {
-    try {
-      await WebBrowser.openBrowserAsync(url);
-    } catch (e) {
-      console.warn('Failed to open Wikipedia', e);
-    }
+  const handleOpenWikipedia = async (answer: string, url?: string) => {
+    if (Platform.OS === 'web') return;
+    await openExternalLink(url || '', answer);
   };
 
   return (
@@ -91,7 +90,8 @@ export default function BookmarksScreen() {
                 </View>
 
                 <Pressable
-                  onPress={() => handleOpenWikipedia(q.wikipedia_url)}
+                  {...getHtmlLinkProps(q.wikipedia_url, q.answer)}
+                  onPress={() => handleOpenWikipedia(q.answer, q.wikipedia_url)}
                   style={({ pressed }) => [
                     styles.wikiBtn,
                     pressed && styles.buttonPressed,

@@ -54,8 +54,11 @@ export class GoogleAuthService {
   // ─── WEB ────────────────────────────────────────────────────────────────────
 
   private static async _signInWeb(supabase: any): Promise<GoogleAuthResponse> {
-    const redirectUri =
-      typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081';
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8081';
+    // Use the explicitly whitelisted /auth/callback path
+    const redirectUri = `${origin}/auth/callback`;
+
+    console.log('[GoogleAuth] Web redirectUri:', redirectUri);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -70,23 +73,37 @@ export class GoogleAuthService {
     }
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
-    if (result.type === 'success') {
+    if (result.type === 'success' && result.url) {
       return GoogleAuthService._resolveFromUrl(supabase, result.url);
     }
     // On web cancelled / dismissed fallback to session check
     return GoogleAuthService._sessionFallback(supabase);
   }
 
-  // ─── NATIVE (Expo Go / dev build) ───────────────────────────────────────────
+  // ─── NATIVE (Expo Go / dev build / standalone) ──────────────────────────────
 
   private static async _signInNative(supabase: any): Promise<GoogleAuthResponse> {
-    // Build the redirect URI Expo Go / the native build will respond to
-    let redirectUri = Linking.createURL('auth/callback');
-    if (!redirectUri || redirectUri.startsWith('null://') || redirectUri === 'null') {
-      redirectUri = 'pochipochi://auth/callback';
+    // Select the optimal redirect URI whitelisted in Supabase:
+    // In Expo Go, Android only routes 'exp://' intents (custom schemes like pochipochi://
+    // are not registered in the Expo Go APK manifest).
+    // 'exp://localhost:8081/--/auth/callback' is explicitly whitelisted in Supabase and
+    // handled natively by Expo Go.
+    // For standalone builds / dev clients, 'pochipochi://auth/callback' is used.
+    let isExpoGo = false;
+    try {
+      const Constants = require('expo-constants').default;
+      isExpoGo =
+        Constants?.appOwnership === 'expo' ||
+        Constants?.executionEnvironment === 'storeClient';
+    } catch {
+      // ignore
     }
 
-    console.log('[GoogleAuth] Native redirectUri:', redirectUri);
+    const redirectUri = isExpoGo
+      ? 'exp://localhost:8081/--/auth/callback'
+      : 'pochipochi://auth/callback';
+
+    console.log('[GoogleAuth] Native redirectUri:', redirectUri, '(isExpoGo:', isExpoGo, ')');
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -100,54 +117,81 @@ export class GoogleAuthService {
       return GoogleAuthService._oauthError(error?.message);
     }
 
-    console.log('[GoogleAuth] Opening browser for:', data.url);
+    console.log('[GoogleAuth] Opening auth session for:', data.url);
 
-    // Promise that resolves when Linking fires an incoming deep-link
-    const callbackUrlPromise = new Promise<string>((resolve) => {
-      const subscription = Linking.addEventListener('url', (event) => {
+    // Clean up any stale sessions before starting
+    WebBrowser.maybeCompleteAuthSession();
+
+    let resolved = false;
+    let linkingSubscription: any = null;
+
+    // Concurrent listener that captures ANY incoming deep link containing tokens or code,
+    // whether starting with exp:// or pochipochi://
+    const deepLinkPromise = new Promise<string>((resolve) => {
+      linkingSubscription = Linking.addEventListener('url', (event) => {
         const url = event.url;
         if (
           url &&
-          (url.includes('auth/callback') ||
+          (url.includes('access_token=') ||
             url.includes('code=') ||
-            url.includes('access_token='))
+            url.includes('auth/callback'))
         ) {
-          subscription.remove();
+          console.log('[GoogleAuth] Captured deep link via Linking listener:', url.split('?')[0]);
+          resolved = true;
           resolve(url);
         }
       });
     });
 
-    // Open the full system browser (NOT chrome custom tab / openAuthSessionAsync).
-    // On Android Expo Go, openBrowserAsync opens a separate browser window.
-    // When the deep link fires (exp://...), the OS kills the browser and switches
-    // back to Expo Go, triggering the Linking 'url' event above.
-    WebBrowser.openBrowserAsync(data.url, {
-      toolbarColor: '#F8F5EE',
-      controlsColor: '#00009F',
-      secondaryToolbarColor: '#F8F5EE',
-      showTitle: true,
-      enableDefaultShareMenuItem: false,
-    }).catch(() => {
-      // If the browser promise rejects (e.g. user closed it), we'll handle
-      // via the timeout below.
-    });
+    // Run openAuthSessionAsync in parallel with deep link listener
+    const authSessionPromise = WebBrowser.openAuthSessionAsync(data.url, redirectUri).then(
+      (res) => {
+        if (res.type === 'success' && res.url) {
+          console.log('[GoogleAuth] Captured deep link via openAuthSessionAsync:', res.url.split('?')[0]);
+          resolved = true;
+          return res.url;
+        }
+        return null;
+      }
+    );
 
-    // Race between Linking event and a generous timeout
-    const callbackUrl = await Promise.race<string | null>([
-      callbackUrlPromise,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 120_000)), // 2 min
-    ]);
+    // 30s safety timeout to prevent infinite hanging
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 30_000)
+    );
 
-    // Dismiss the browser once we have the deep link
-    WebBrowser.dismissBrowser();
+    try {
+      const callbackUrl = await Promise.race([
+        deepLinkPromise,
+        authSessionPromise,
+        timeoutPromise,
+      ]);
 
-    if (!callbackUrl) {
-      // Timed out or user closed browser — check if session landed anyway
-      return GoogleAuthService._sessionFallback(supabase);
+      if (linkingSubscription) {
+        linkingSubscription.remove();
+        linkingSubscription = null;
+      }
+
+      // Dismiss any lingering browser tab
+      try {
+        WebBrowser.dismissAuthSession();
+      } catch {}
+
+      if (callbackUrl) {
+        return await GoogleAuthService._resolveFromUrl(supabase, callbackUrl);
+      }
+
+      // If user closed the window or timeout expired, check if session landed
+      return await GoogleAuthService._sessionFallback(supabase);
+    } catch (err: any) {
+      if (linkingSubscription) {
+        linkingSubscription.remove();
+      }
+      return {
+        type: 'error',
+        message: err?.message || 'Authentication session interrupted',
+      };
     }
-
-    return GoogleAuthService._resolveFromUrl(supabase, callbackUrl);
   }
 
   // ─── Shared helpers ──────────────────────────────────────────────────────────
@@ -180,25 +224,38 @@ export class GoogleAuthService {
 
     if (code) {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error || !data.user) {
-        return {
-          type: 'error',
-          message: error?.message || 'Failed to exchange authorization code',
-        };
+      if (error || !data?.user) {
+        // Code might have already been exchanged by the callback route handler; check active session
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          authUser = sessionData.session.user;
+        } else {
+          return {
+            type: 'error',
+            message: error?.message || 'Failed to exchange authorization code',
+          };
+        }
+      } else {
+        authUser = data.user;
       }
-      authUser = data.user;
     } else if (accessToken) {
       const { data, error } = await supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken || '',
       });
-      if (error || !data.user) {
-        return {
-          type: 'error',
-          message: error?.message || 'Failed to establish session',
-        };
+      if (error || !data?.user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          authUser = sessionData.session.user;
+        } else {
+          return {
+            type: 'error',
+            message: error?.message || 'Failed to establish session',
+          };
+        }
+      } else {
+        authUser = data.user;
       }
-      authUser = data.user;
     } else {
       return GoogleAuthService._sessionFallback(supabase);
     }

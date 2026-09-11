@@ -43,40 +43,67 @@ export default function AuthCallback() {
           return;
         }
 
-        // 2. Extract code from search params or full initial URL
+        // Check if session is already established first (e.g. by GoogleAuthService)
+        const { data: initialSession } = await supabase.auth.getSession();
+        if (initialSession?.session?.user && isMounted) {
+          await finalizeUserLogin(initialSession.session.user);
+          return;
+        }
+
+        // 2. Extract code, access_token, and refresh_token from search params, window hash, or initial deep link
         let authCode = params.code;
-        if (!authCode) {
-          const initialUrl = await Linking.getInitialURL();
+        let accessToken = params.access_token;
+        let refreshToken = params.refresh_token;
+
+        // Check Web window location hash (e.g. #access_token=...&refresh_token=...)
+        if (typeof window !== 'undefined' && window.location?.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+          accessToken = accessToken || hashParams.get('access_token') || undefined;
+          refreshToken = refreshToken || hashParams.get('refresh_token') || undefined;
+          authCode = authCode || hashParams.get('code') || undefined;
+        }
+
+        // Check Native Linking URL
+        if (!authCode && !accessToken) {
+          const initialUrl = (await Linking.getInitialURL()) || Linking.getLinkingURL();
           if (initialUrl) {
-            const parsed = Linking.parse(initialUrl);
-            authCode = parsed.queryParams?.code as string | undefined;
+            const fragmentStr = initialUrl.includes('#') ? initialUrl.split('#')[1] : '';
+            const queryStr = initialUrl.includes('?') ? initialUrl.split('?')[1]?.split('#')[0] : '';
+            const parsedParams = new URLSearchParams(fragmentStr || queryStr);
+            authCode = authCode || parsedParams.get('code') || undefined;
+            accessToken = accessToken || parsedParams.get('access_token') || undefined;
+            refreshToken = refreshToken || parsedParams.get('refresh_token') || undefined;
           }
         }
 
-        // 3. If code exists, exchange it for a session (PKCE Flow)
+        // 3. If access_token exists in fragment/params, set session
+        if (accessToken) {
+          setStatusMessage('Setting up your session...');
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+
+          if (!error && data?.session?.user && isMounted) {
+            await finalizeUserLogin(data.session.user);
+            return;
+          }
+        }
+
+        // 4. If code exists, exchange it for a session (PKCE Flow)
         if (authCode) {
           setStatusMessage('Verifying credentials...');
           const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
 
-          if (error) {
-            console.error('[AuthCallback] exchangeCodeForSession error:', error.message);
-            setStatusMessage('Session exchange failed. Returning to welcome...');
-            setTimeout(() => {
-              if (isMounted) router.replace('/ftue');
-            }, 1500);
-            return;
-          }
-
-          const user = data.session?.user;
-          if (user && isMounted) {
-            await finalizeUserLogin(user);
+          if (!error && data?.session?.user && isMounted) {
+            await finalizeUserLogin(data.session.user);
             return;
           }
         }
 
-        // 4. Fallback: check if session is already established
+        // 5. Fallback: check if session is established now
         const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session?.user && isMounted) {
+        if (sessionData?.session?.user && isMounted) {
           await finalizeUserLogin(sessionData.session.user);
           return;
         }

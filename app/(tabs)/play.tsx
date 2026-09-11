@@ -34,6 +34,7 @@ import {
   UserProfile,
 } from '../../src/types';
 import { AudioHaptics } from '../../src/utils/audioHaptics';
+import { randomizeQuestionOptions } from '../../src/utils/shuffle';
 
 type GameState = 'streaming' | 'resolved';
 
@@ -95,11 +96,17 @@ export default function PlayScreen() {
       servedHistory.current.push(question.id);
       servedHistory.current.push(question.clue_text.trim().toLowerCase());
 
+      // Ensure options are freshly randomized across slots A, B, C, D
+      const readyQuestion: Question = {
+        ...question,
+        options: randomizeQuestionOptions(question.options, question.answer),
+      };
+
       // Scroll immediately back to top before mounting the new question
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
 
       // Synchronously commit the new question & start streaming
-      setCurrentQuestion(question);
+      setCurrentQuestion(readyQuestion);
       setSelectedAnswer(null);
       setIsCorrect(false);
       setEloResult(null);
@@ -224,6 +231,12 @@ export default function PlayScreen() {
         times_served: currentQuestion.times_served + 1,
         times_correct: currentQuestion.times_correct + (correct ? 1 : 0),
       });
+
+      // Persistently mark question as attempted so user never encounters it again
+      await PochiRepository.recordAttemptedQuestion(
+        currentQuestion.id,
+        currentQuestion.clue_text
+      );
     },
     [gameState, currentQuestion, profile]
   );

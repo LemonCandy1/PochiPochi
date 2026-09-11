@@ -19,6 +19,7 @@ import {
   Alert,
   Animated,
   Easing,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -50,6 +51,8 @@ import {
   Question,
 } from '../src/types';
 import { AudioHaptics } from '../src/utils/audioHaptics';
+import { formatWikipediaUrl } from '../src/utils/wikipedia';
+import { getHtmlLinkProps, openExternalLink } from '../src/utils/openLink';
 
 // Apple Vector Logo
 const AppleVectorIcon: React.FC<{ size?: number; color?: string }> = ({
@@ -283,13 +286,16 @@ export default function FTUEScreen() {
       answer: currentQ.answer,
       wasCorrect: isCorrect,
       interruptSpeedMs: duration,
-      wikiUrl: currentQ.wikipedia_url,
+      wikiUrl: formatWikipediaUrl(currentQ.answer, currentQ.wikipedia_url),
       contextSummary: currentQ.context_summary,
       difficultyTier: currentQ.difficulty_tier,
     };
 
     const nextResults = [...completedResults, resultItem];
     setCompletedResults(nextResults);
+
+    // Persistently mark question as tried
+    PochiRepository.recordAttemptedQuestion(currentQ.id, currentQ.clue_text);
 
     // Auto-advance after 1.2s as per spec
     setTimeout(() => {
@@ -350,12 +356,24 @@ export default function FTUEScreen() {
   }, [currentStep]);
 
   // Open Wikipedia deep link
-  const handleOpenWikipedia = async (url: string) => {
-    try {
-      await WebBrowser.openBrowserAsync(url);
-    } catch (e) {
-      console.warn('Could not open Wikipedia URL', e);
-    }
+  const handleOpenWikipedia = async (url?: string, answer?: string) => {
+    if (Platform.OS === 'web') return;
+    await openExternalLink(url || '', answer);
+  };
+
+  // Quick skip for Expo Go & web testing
+  const handleQuickSkip = async () => {
+    AudioHaptics.playTypewriterTick();
+    const guestSession: FTUESessionState = {
+      guestId: 'tester-' + Date.now(),
+      selectedCompanion: selectedCompanion || 'dog',
+      selectedCategory: selectedCategory || 'geography',
+      calibratedElo: 1200,
+      sessionStreak: 1,
+      completedQuestions: [],
+    };
+    await PochiRepository.completeFTUE(guestSession, 'guest');
+    router.replace('/(tabs)');
   };
 
   // --------------------------------------------------------------------------
@@ -468,6 +486,21 @@ export default function FTUEScreen() {
               text: 'Play as Guest',
               onPress: () => handleCompleteFTUE('guest'),
             },
+            {
+              text: 'Sign in (Demo Google)',
+              onPress: async () => {
+                const demoUser = GoogleAuthService.getDemoUser();
+                session.guestId = demoUser.userId;
+                const profile = await PochiRepository.completeFTUE(session, 'google');
+                await PochiRepository.saveProfile({
+                  ...profile,
+                  username: demoUser.displayName,
+                  id: demoUser.userId,
+                });
+                AudioHaptics.playCorrect();
+                router.replace('/(tabs)');
+              },
+            },
           ]);
           return;
         }
@@ -487,6 +520,21 @@ export default function FTUEScreen() {
               text: 'Play as Guest',
               onPress: () => handleCompleteFTUE('guest'),
             },
+            {
+              text: 'Sign in (Demo Google)',
+              onPress: async () => {
+                const demoUser = GoogleAuthService.getDemoUser();
+                session.guestId = demoUser.userId;
+                const profile = await PochiRepository.completeFTUE(session, 'google');
+                await PochiRepository.saveProfile({
+                  ...profile,
+                  username: demoUser.displayName,
+                  id: demoUser.userId,
+                });
+                AudioHaptics.playCorrect();
+                router.replace('/(tabs)');
+              },
+            },
           ]
         );
         return;
@@ -501,6 +549,22 @@ export default function FTUEScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+      {/* Top Test Navigation Bar for Expo Go & Web */}
+      <View style={styles.ftueTopBar}>
+        <View style={styles.stepBadge}>
+          <Text style={styles.stepBadgeText}>STEP {currentStep} OF 6</Text>
+        </View>
+        <Pressable
+          onPress={handleQuickSkip}
+          style={({ pressed }) => [
+            styles.quickTestBtn,
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <Text style={styles.quickTestBtnText}>Skip Tour (Quick Test) →</Text>
+        </Pressable>
+      </View>
+
       {/* ==================================================================== */}
       {/* SCREEN 1: THE TACTILE HOOK ("Touch the Pochi")                        */}
       {/* ==================================================================== */}
@@ -943,8 +1007,9 @@ export default function FTUEScreen() {
                       <Text style={styles.accordionClueText}>{item.questionText}</Text>
                       <Text style={styles.accordionSummaryText}>{item.contextSummary}</Text>
                       <Pressable
-                        onPress={() => handleOpenWikipedia(item.wikiUrl)}
+                        onPress={() => handleOpenWikipedia(item.wikiUrl, item.answer)}
                         style={styles.accordionWikiBtn}
+                        {...getHtmlLinkProps(item.wikiUrl, item.answer)}
                       >
                         <Text style={styles.accordionWikiBtnText}>Learn more on Wikipedia</Text>
                         <ExternalLink size={13} color={Colors.primaryDark} />
@@ -1733,4 +1798,37 @@ const styles = StyleSheet.create({
     color: Colors.inkSecondary,
     textDecorationLine: 'underline',
   },
+  ftueTopBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  stepBadge: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  stepBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 10,
+    color: Colors.primaryDark,
+  },
+  quickTestBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  quickTestBtnText: {
+    fontFamily: Fonts.heading,
+    fontSize: 12,
+    color: Colors.primary,
+  },
 });
+

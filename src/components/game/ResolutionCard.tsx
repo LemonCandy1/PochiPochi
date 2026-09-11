@@ -8,6 +8,7 @@ import {
 } from 'lucide-react-native';
 import React from 'react';
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -17,12 +18,16 @@ import { SpeedLightningIcon } from '../icons/CategoryIcons';
 import { Colors, Shadows } from '../../theme/colors';
 import { Fonts } from '../../theme/typography';
 import { EloChangeResult, Question } from '../../types';
+import { getHtmlLinkProps, openExternalLink } from '../../utils/openLink';
 
 interface ResolutionCardProps {
   question: Question;
   isCorrect: boolean;
   eloResult: EloChangeResult;
-  isBookmarked: boolean;
+  selectedAnswer?: string | null;
+  speedBonus?: number;
+  timeRemaining?: number;
+  isBookmarked?: boolean;
   isLoadingNext?: boolean;
   onToggleBookmark: () => void;
   onOpenReport: () => void;
@@ -33,18 +38,18 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
   question,
   isCorrect,
   eloResult,
-  isBookmarked,
+  selectedAnswer,
+  speedBonus,
+  timeRemaining,
+  isBookmarked = false,
   isLoadingNext = false,
   onToggleBookmark,
   onOpenReport,
   onNextQuestion,
 }) => {
   const handleOpenWikipedia = async () => {
-    try {
-      await WebBrowser.openBrowserAsync(question.wikipedia_url);
-    } catch (e) {
-      console.warn('Failed to open Wikipedia', e);
-    }
+    if (Platform.OS === 'web') return;
+    await openExternalLink(question.wikipedia_url, question.answer);
   };
 
   const isPositive = eloResult.deltaPlayer > 0;
@@ -123,6 +128,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
 
       {/* Wikipedia Deep Link */}
       <Pressable
+        {...getHtmlLinkProps(question.wikipedia_url, question.answer)}
         onPress={handleOpenWikipedia}
         style={({ pressed }) => [
           styles.wikiButton,

@@ -267,6 +267,20 @@ const server = http.createServer((req, res) => {
     const mappedJArchive = JARCHIVE_CLUES.map((clue, idx) => {
       const cat = classifyCategory(clue.category);
       const elo = mapValueToElo(clue.round, clue.value);
+function formatWikiUrl(answer, explicitUrl) {
+  if (explicitUrl && typeof explicitUrl === 'string' && explicitUrl.startsWith('https://en.wikipedia.org/wiki/')) {
+    return explicitUrl;
+  }
+  const clean = (answer || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/^["'“”‘’]+|["'“”‘’,.]+$/g, '')
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/^(the|a|an)\s+/i, '')
+    .trim() || (answer || '').trim();
+  const slug = clean.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('_');
+  return `https://en.wikipedia.org/wiki/${encodeURIComponent(slug)}`;
+}
+
       const cleanAnswer = clue.answer.replace(/^the\s+/i, '').trim();
       const options = [clue.answer, ...(clue.distractors || ['Alpha', 'Beta', 'Gamma'])].sort(() => 0.5 - Math.random());
 
@@ -277,7 +291,7 @@ const server = http.createServer((req, res) => {
         answer: clue.answer,
         answer_mask_length: cleanAnswer.replace(/\s+/g, '').length,
         options,
-        wikipedia_url: clue.wikipedia_url || `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanAnswer)}`,
+        wikipedia_url: formatWikiUrl(clue.answer, clue.wikipedia_url),
         context_summary: `J! Archive clue from ${clue.category} (${clue.round}, ${clue.value}). Baseline Elo derived from Jeopardy value tier.`,
         elo_rating: elo,
         times_served: 0,
@@ -296,7 +310,7 @@ const server = http.createServer((req, res) => {
         answer: tqa.answer.value,
         answer_mask_length: cleanAnswer.replace(/\s+/g, '').length,
         options,
-        wikipedia_url: tqa.wikipedia_url || `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanAnswer)}`,
+        wikipedia_url: formatWikiUrl(tqa.answer.value, tqa.wikipedia_url),
         context_summary: `TriviaQA verified knowledge pair with Wikipedia ground truth.`,
         elo_rating: tqa.elo_rating,
         times_served: 0,

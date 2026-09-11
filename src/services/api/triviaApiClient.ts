@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import { Category, Question } from '../../types';
+import { formatWikipediaUrl } from '../../utils/wikipedia';
+import { shuffleArray } from '../../utils/shuffle';
 
 /**
  * Raw structure for a J! Archive / Jeopardy Clue (from 400k+ dataset / scraper)
@@ -447,7 +449,7 @@ export class TriviaApiClient {
 
     // Fill from fallback category pool if needed
     const pool = CATEGORY_DISTRACTOR_POOLS[category] || CATEGORY_DISTRACTOR_POOLS.general;
-    const shuffledPool = [...pool].sort(() => 0.5 - Math.random());
+    const shuffledPool = shuffleArray(pool);
 
     for (const candidate of shuffledPool) {
       if (distractors.length >= 3) break;
@@ -459,9 +461,9 @@ export class TriviaApiClient {
       }
     }
 
-    // Combine correct + 3 distractors and shuffle
+    // Combine correct + 3 distractors and shuffle with Fisher-Yates
     const fourChoices = [correctAnswer, ...distractors.slice(0, 3)];
-    return fourChoices.sort(() => 0.5 - Math.random());
+    return shuffleArray(fourChoices);
   }
 
   /**
@@ -480,9 +482,7 @@ export class TriviaApiClient {
       category,
       clue.distractors
     );
-    const wikiUrl =
-      clue.wikipedia_url ||
-      `https://en.wikipedia.org/wiki/${encodeURIComponent(cleanAnswer)}`;
+    const wikiUrl = formatWikipediaUrl(clue.answer, clue.wikipedia_url);
 
     return {
       id: clue.id || `jarchive-bundle-${index}`,
@@ -526,7 +526,10 @@ export class TriviaApiClient {
         if (Array.isArray(json) && json.length > 0) {
           return json.map((item: any, idx: number) => {
             if (item.clue_text && item.answer && item.options) {
-              return item as Question;
+              return {
+                ...item,
+                wikipedia_url: formatWikipediaUrl(item.answer, item.wikipedia_url),
+              } as Question;
             }
             return this.convertJArchiveToQuestion(item as JArchiveClue, idx);
           });

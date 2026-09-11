@@ -2,6 +2,8 @@ import '../../utils/cryptoPolyfill';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Bookmark, Category, Question, UserProfile } from '../../types';
+import { formatWikipediaUrl } from '../../utils/wikipedia';
+import { randomizeQuestionOptions } from '../../utils/shuffle';
 
 /**
  * Supabase Client Configuration for PochiPochi Database
@@ -130,8 +132,11 @@ export class SupabaseService {
         clue_text: row.clue_text,
         answer: row.answer,
         answer_mask_length: row.answer_mask_length || row.answer.replace(/\s+/g, '').length,
-        options: Array.isArray(row.options) ? row.options : JSON.parse(row.options || '[]'),
-        wikipedia_url: row.wikipedia_url,
+        options: randomizeQuestionOptions(
+          Array.isArray(row.options) ? row.options : JSON.parse(row.options || '[]'),
+          row.answer
+        ),
+        wikipedia_url: formatWikipediaUrl(row.answer, row.wikipedia_url),
         context_summary: row.context_summary,
         elo_rating: row.elo_rating ?? 1200,
         times_served: row.times_served ?? 0,
@@ -158,7 +163,7 @@ export class SupabaseService {
         answer: question.answer,
         answer_mask_length: question.answer_mask_length,
         options: question.options,
-        wikipedia_url: question.wikipedia_url,
+        wikipedia_url: formatWikipediaUrl(question.answer, question.wikipedia_url),
         context_summary: question.context_summary,
         elo_rating: question.elo_rating,
         times_served: question.times_served,

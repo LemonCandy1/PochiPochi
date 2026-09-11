@@ -269,6 +269,9 @@ async function main() {
     const answerMaskLength = correctAnswer.replace(/[^a-zA-Z0-9]/g, '').length;
 
     const id = `jarch-geo-${candidate.season}-${String(targetQuestions.length + 1).padStart(4, '0')}`;
+    const cleanForWiki = correctAnswer.replace(/^(the|a|an)\s+/i, '').trim();
+    const wikiSlug = cleanForWiki.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('_');
+    const wikipedia_url = `https://en.wikipedia.org/wiki/${encodeURIComponent(wikiSlug)}`;
 
     targetQuestions.push({
       id,
@@ -277,6 +280,7 @@ async function main() {
       answer: correctAnswer,
       answer_mask_length: answerMaskLength,
       options,
+      wikipedia_url,
       elo_rating: eloRating,
       context_summary: `Jeopardy! category: "${candidate.category}" • Aired: ${candidate.airDate || 'Archive'}`,
       times_served: 0,
