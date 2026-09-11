@@ -18,7 +18,6 @@ import {
   SpeedLightningIcon,
 } from '../../src/components/icons/CategoryIcons';
 import {
-  AudienceCrowd,
   PochiLabrador,
 } from '../../src/components/mascot/MascotVectors';
 import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
@@ -402,11 +401,6 @@ export default function PlayScreen() {
             onNextQuestion={loadNextQuestion}
           />
         )}
-
-        {/* Audience Pit Vignette */}
-        <View style={styles.audienceSection}>
-          <AudienceCrowd excited={isCorrect && gameState === 'resolved'} />
-        </View>
       </ScrollView>
 
       {/* Flag / Report Modal */}
@@ -600,10 +594,5 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.body,
     fontSize: 11,
     color: Colors.inkSecondary,
-  },
-  audienceSection: {
-    marginTop: 16,
-    paddingBottom: 8,
-    alignItems: 'center',
   },
 });
