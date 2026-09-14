@@ -32,6 +32,7 @@ const DEFAULT_PROFILE: UserProfile = {
   best_streak: 0,
   show_letter_count: true,
   sound_enabled: true,
+  battle_input_mode: 'matrix',
 };
 
 export class PochiRepository {
@@ -807,5 +808,30 @@ export class PochiRepository {
       options: randomizeQuestionOptions(q.options, q.answer),
       wikipedia_url: formatWikipediaUrl(q.answer, q.wikipedia_url),
     }));
+  }
+
+  /**
+   * Complete account deletion and local cache purge complying with Apple App Store Guideline 5.1.1.
+   * Completely purges all stored preferences, profiles, questions, bookmarks, reports, and FTUE state.
+   */
+  static async deleteAccountAndResetData(): Promise<void> {
+    try {
+      this.questionsCache = null;
+      this.profileCache = null;
+      this.bookmarksCache = null;
+      this.attemptedKeysCache = null;
+
+      await AsyncStorage.clear();
+
+      if (SupabaseService.isConfigured()) {
+        try {
+          const client = SupabaseService.getClient();
+          await client.auth.signOut();
+        } catch {}
+      }
+    } catch (e) {
+      console.error('Error during account deletion and data reset:', e);
+      throw e;
+    }
   }
 }

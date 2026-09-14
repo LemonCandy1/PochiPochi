@@ -9,10 +9,21 @@
     "userInterfaceStyle": "light",
     "backgroundColor": "#F8F5EE",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pochipochi.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.pochipochi.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#F8F5EE",
         "foregroundImage": "./assets/android-icon-foreground.png",

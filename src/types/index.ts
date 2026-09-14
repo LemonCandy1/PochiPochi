@@ -32,6 +32,8 @@ export interface Question {
 
 export type CompanionType = 'dog' | 'bear' | 'bunny' | 'owl';
 
+export type BattleInputMode = 'matrix' | 'multiple_choice';
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -45,6 +47,7 @@ export interface UserProfile {
   show_letter_count?: boolean;
   sound_enabled?: boolean;
   has_completed_ftue?: boolean;
+  battle_input_mode?: BattleInputMode;
 }
 
 export interface FTUESessionState {

@@ -1,0 +1,10 @@
+node_modules
+.git
+.expo
+dist
+web-build
+.system_generated
+npm-debug.log
+.DS_Store
+*.webp
+*.mp4

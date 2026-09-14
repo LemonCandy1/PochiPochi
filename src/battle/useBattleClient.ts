@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import {
   ClientMessage,
   MatrixTile,
@@ -54,8 +55,11 @@ export interface UseBattleClientReturn {
   activeBuzzerName: string | null;
   isMyTurnToAnswer: boolean;
   isLockedOut: boolean;
+  setIsLockedOut: React.Dispatch<React.SetStateAction<boolean>>;
   answerLength: number;
   tiles: MatrixTile[];
+  options: string[];
+  cleanAnswer: string;
   opponentKeystrokes: string[];
 
   resolvedAnswer: string | null;
@@ -78,9 +82,13 @@ export function useBattleClient({
   autoConnect = true,
 }: UseBattleClientOptions = {}): UseBattleClientReturn {
   const wsRef = useRef<WebSocket | null>(null);
-  const ntpIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const ntpIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ntpSamplesRef = useRef<NTPSample[]>([]);
+  const isIntentionalDisconnectRef = useRef<boolean>(false);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clockOffsetRef = useRef<number>(0);
   const [rtt, setRtt] = useState<number>(0);
   const [clockOffset, setClockOffset] = useState<number>(0);
@@ -92,6 +100,7 @@ export function useBattleClient({
   const [roomState, setRoomState] = useState<RoomState>('LOBBY');
   const [players, setPlayers] = useState<Player[]>([]);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const myPlayerIdRef = useRef<string | null>(null);
   const [round, setRound] = useState<number>(0);
   const [totalRounds, setTotalRounds] = useState<number>(10);
   const [category, setCategory] = useState<string>('');
@@ -104,6 +113,8 @@ export function useBattleClient({
   const [isLockedOut, setIsLockedOut] = useState<boolean>(false);
   const [answerLength, setAnswerLength] = useState<number>(0);
   const [tiles, setTiles] = useState<MatrixTile[]>([]);
+  const [options, setOptions] = useState<string[]>([]);
+  const [cleanAnswer, setCleanAnswer] = useState<string>('');
   const [opponentKeystrokes, setOpponentKeystrokes] = useState<string[]>([]);
 
   const [resolvedAnswer, setResolvedAnswer] = useState<string | null>(null);
@@ -127,30 +138,49 @@ export function useBattleClient({
       return;
     }
 
+    isIntentionalDisconnectRef.current = false;
     setConnectionStatus('CONNECTING');
     const ws = new WebSocket(serverUrl);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setConnectionStatus('CONNECTED');
+      reconnectAttemptsRef.current = 0;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
 
-      send({
-        type: 'JOIN_ROOM',
-        roomId,
-        playerName,
-      });
+      ws.send(
+        JSON.stringify({
+          type: 'JOIN_ROOM',
+          roomId,
+          playerName,
+          reconnectPlayerId: myPlayerIdRef.current || undefined,
+        })
+      );
+
+      // Immediate NTP sync ping
+      ws.send(JSON.stringify({ type: 'SYNC_PING', t1: Date.now() }));
 
       ntpSamplesRef.current = [];
       let burstCount = 0;
-      const burstInterval = setInterval(() => {
+      if (burstIntervalRef.current) clearInterval(burstIntervalRef.current);
+      burstIntervalRef.current = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
           sendSyncPing();
           burstCount += 1;
           if (burstCount >= NTP_WINDOW_SIZE) {
-            clearInterval(burstInterval);
+            if (burstIntervalRef.current) {
+              clearInterval(burstIntervalRef.current);
+              burstIntervalRef.current = null;
+            }
           }
         } else {
-          clearInterval(burstInterval);
+          if (burstIntervalRef.current) {
+            clearInterval(burstIntervalRef.current);
+            burstIntervalRef.current = null;
+          }
         }
       }, 100);
 
@@ -166,12 +196,19 @@ export function useBattleClient({
       try {
         const msg = JSON.parse(event.data) as ServerMessage;
 
+        // 0. Join Ack
+        if (msg.type === 'JOIN_ACK') {
+          myPlayerIdRef.current = msg.yourPlayerId;
+          setMyPlayerId(msg.yourPlayerId);
+          return;
+        }
+
         // 1. NTP Pong
         if (msg.type === 'SYNC_PONG') {
           const t4 = Date.now();
           const { t1, t2, t3 } = msg;
 
-          const currentRtt = (t4 - t1) - (t3 - t2);
+          const currentRtt = Math.max(0, (t4 - t1) - (t3 - t2));
           const currentOffset = ((t2 - t1) + (t3 - t4)) / 2;
 
           const samples = ntpSamplesRef.current;
@@ -187,9 +224,7 @@ export function useBattleClient({
             clockOffsetRef.current = bestSample.offset;
             setClockOffset(bestSample.offset);
             setRtt(bestSample.rtt);
-            if (samples.length >= 3) {
-              setIsNtpCalibrated(true);
-            }
+            setIsNtpCalibrated(true);
           }
           return;
         }
@@ -201,9 +236,12 @@ export function useBattleClient({
           setRound(msg.round);
           setTotalRounds(msg.totalRounds);
 
-          if (!myPlayerId && msg.players.length > 0) {
+          if (!myPlayerIdRef.current && msg.players.length > 0) {
             const me = msg.players.find((p) => p.name === playerName);
-            if (me) setMyPlayerId(me.id);
+            if (me) {
+              myPlayerIdRef.current = me.id;
+              setMyPlayerId(me.id);
+            }
           }
           return;
         }
@@ -216,6 +254,8 @@ export function useBattleClient({
           setCategory(msg.category);
           setAnswerLength(msg.answerLength);
           setTiles(msg.tiles);
+          setOptions(msg.options || []);
+          setCleanAnswer(msg.cleanAnswer || '');
           setStreamedText('');
           setIsStreamPaused(false);
           setActiveBuzzerId(null);
@@ -241,7 +281,11 @@ export function useBattleClient({
 
         // 5. Stream Paused
         if (msg.type === 'STREAM_PAUSED') {
-          setIsStreamPaused(true);
+          if (msg.reason === 'BUZZ') {
+            setIsStreamPaused(true);
+          }
+          // When reason is 'END_OF_TEXT', the clue text is completely revealed,
+          // but buzzing remains active during the post-reveal grace window!
           return;
         }
 
@@ -251,6 +295,9 @@ export function useBattleClient({
           setIsStreamPaused(true);
           setActiveBuzzerId(msg.winnerId);
           setActiveBuzzerName(msg.winnerName);
+          if (msg.cleanAnswer) {
+            setCleanAnswer(msg.cleanAnswer);
+          }
           setOpponentKeystrokes([]);
           AudioHaptics.playPochiBuzzer();
           return;
@@ -268,7 +315,7 @@ export function useBattleClient({
             AudioHaptics.playCorrect();
           } else {
             AudioHaptics.playIncorrect();
-            if (msg.playerId === myPlayerId) {
+            if (msg.playerId === myPlayerId || msg.playerId === myPlayerIdRef.current) {
               setIsLockedOut(true);
             }
           }
@@ -279,6 +326,9 @@ export function useBattleClient({
         if (msg.type === 'ROUND_RESOLVED') {
           setRoomState('ROUND_RESOLVED');
           setResolvedAnswer(msg.correctAnswer);
+          if (msg.correctAnswer) {
+            setCleanAnswer(msg.correctAnswer.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+          }
           setResolvedFullQuestion(msg.fullQuestionText);
           setPlayers(msg.players);
           setActiveBuzzerId(null);
@@ -309,18 +359,42 @@ export function useBattleClient({
 
     ws.onclose = () => {
       setConnectionStatus('DISCONNECTED');
+      if (burstIntervalRef.current) {
+        clearInterval(burstIntervalRef.current);
+        burstIntervalRef.current = null;
+      }
       if (ntpIntervalRef.current) {
         clearInterval(ntpIntervalRef.current);
         ntpIntervalRef.current = null;
+      }
+
+      // Mobile resilience: Auto-reconnect on unexpected drop (cellular handover / backgrounding)
+      if (!isIntentionalDisconnectRef.current && reconnectAttemptsRef.current < 5) {
+        const backoffMs = Math.min(1000 * Math.pow(1.5, reconnectAttemptsRef.current), 5000);
+        reconnectAttemptsRef.current += 1;
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connect();
+        }, backoffMs);
       }
     };
 
     ws.onerror = () => {
       setConnectionStatus('DISCONNECTED');
     };
-  }, [serverUrl, roomId, playerName, send, sendSyncPing, myPlayerId]);
+  }, [serverUrl, roomId, playerName, send, sendSyncPing]);
 
   const disconnect = useCallback(() => {
+    isIntentionalDisconnectRef.current = true;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+
+    if (burstIntervalRef.current) {
+      clearInterval(burstIntervalRef.current);
+      burstIntervalRef.current = null;
+    }
     if (ntpIntervalRef.current) {
       clearInterval(ntpIntervalRef.current);
       ntpIntervalRef.current = null;
@@ -331,6 +405,21 @@ export function useBattleClient({
     }
     setConnectionStatus('DISCONNECTED');
   }, []);
+
+  // Listen for mobile AppState transitions (background -> foreground)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (nextAppState === 'active' && !isIntentionalDisconnectRef.current) {
+        if (!wsRef.current || wsRef.current.readyState > WebSocket.OPEN) {
+          connect();
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [connect]);
 
   useEffect(() => {
     if (autoConnect) {
@@ -382,7 +471,11 @@ export function useBattleClient({
   const myPlayer = players.find((p) => p.id === myPlayerId) || null;
   const opponentPlayer = players.find((p) => p.id !== myPlayerId) || null;
   const isMyTurnToAnswer =
-    roomState === 'ANSWERING' && Boolean(myPlayerId && activeBuzzerId === myPlayerId);
+    roomState === 'ANSWERING' &&
+    (Boolean(myPlayerId && activeBuzzerId === myPlayerId) ||
+      Boolean(myPlayer && activeBuzzerName === myPlayer.name) ||
+      (Boolean(activeBuzzerId) &&
+        players.filter((p) => !p.id.startsWith('bot-')).length <= 1));
   const canBuzz =
     roomState === 'STREAMING' && !isLockedOut && !isStreamPaused;
 
@@ -407,8 +500,11 @@ export function useBattleClient({
     activeBuzzerName,
     isMyTurnToAnswer,
     isLockedOut,
+    setIsLockedOut,
     answerLength,
     tiles,
+    options,
+    cleanAnswer,
     opponentKeystrokes,
     resolvedAnswer,
     resolvedFullQuestion,

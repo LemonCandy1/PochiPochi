@@ -157,10 +157,6 @@ export default function HomeScreen() {
               <Zap size={12} color="#FFFFFF" fill="#FFFFFF" />
               <Text style={styles.battleBadgeText}>LIVE BATTLE</Text>
             </View>
-            <View style={styles.battleNtpBadge}>
-              <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
-              <Text style={styles.battleNtpBadgeText}>NTP 60MS ARBITRATION</Text>
-            </View>
           </View>
           <View style={styles.battleContentRow}>
             <View style={{ flex: 1 }}>

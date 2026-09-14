@@ -30,7 +30,9 @@
     "react-native-web": "^0.21.2"
   },
   "devDependencies": {
+    "@types/node": "^26.5.1",
     "@types/react": "~19.2.2",
+    "@types/ws": "^8.18.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -41,6 +43,9 @@
     "battle:server": "npx -y tsx server/server.ts",
     "battle:test": "npx -y tsx tests/test_battle_suite.ts",
     "battle:e2e": "npx -y tsx tests/test_battle_e2e.ts",
+    "battle:modes": "npx -y tsx tests/test_answering_modes.ts",
+    "battle:dynamic": "npx -y tsx tests/test_dynamic_typing.ts",
+    "battle:stability": "npx -y tsx tests/test_stability.ts",
     "minhaya:server": "npx -y tsx server/server.ts",
     "minhaya:test": "npx -y tsx tests/test_battle_suite.ts",
     "minhaya:e2e": "npx -y tsx tests/test_battle_e2e.ts"

@@ -28,6 +28,7 @@ export interface TriviaQuestion {
   category: string;
   question: string;
   answer: string; // Server-side only until ROUND_RESOLVED
+  options?: string[]; // 4 multiple choice options
 }
 
 export interface MatrixTile {
@@ -51,6 +52,7 @@ export type ClientMessage =
 
 // Server -> Client Messages
 export type ServerMessage =
+  | { type: 'JOIN_ACK'; yourPlayerId: string; roomId: string; isHost: boolean }
   | { type: 'SYNC_PONG'; t1: number; t2: number; t3: number }
   | {
       type: 'ROOM_STATE';
@@ -66,6 +68,8 @@ export type ServerMessage =
       category: string;
       answerLength: number;
       tiles: MatrixTile[];
+      options?: string[];
+      cleanAnswer?: string;
       durationMs: number;
     }
   | {
@@ -86,6 +90,7 @@ export type ServerMessage =
       cutoffCharIndex: number;
       queueLength: number;
       answerTimeoutMs: number;
+      cleanAnswer?: string;
       isCascaded?: boolean;
     }
   | {

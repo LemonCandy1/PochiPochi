@@ -22,6 +22,9 @@ class AudioHapticsService {
   private wrongSound: any = null;
   private audioConfigured: boolean = false;
 
+  private lastCorrectTime: number = 0;
+  private lastIncorrectTime: number = 0;
+
   constructor() {
     // Eagerly pre-load sounds in background for instant low-latency playback
     if (Platform.OS !== 'web' && ExpoAudio) {
@@ -74,6 +77,8 @@ class AudioHapticsService {
 
   public stopAll() {
     this.isSilenced = true;
+    this.lastCorrectTime = 0;
+    this.lastIncorrectTime = 0;
     // Clear all scheduled chimes/buzzes
     this.pendingTimeouts.forEach((id) => clearTimeout(id));
     this.pendingTimeouts = [];
@@ -159,6 +164,14 @@ class AudioHapticsService {
    */
   async playCorrect() {
     if (this.isSilenced || !this.soundEnabled) return;
+    const now = Date.now();
+    // Debounce to ensure correct chime only plays once if triggered concurrently or in rapid succession
+    // (e.g. dynamic typing autofill + server ANSWER_EVALUATED message)
+    if (now - this.lastCorrectTime < 1200) {
+      return;
+    }
+    this.lastCorrectTime = now;
+
     try {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
@@ -207,6 +220,13 @@ class AudioHapticsService {
    */
   async playIncorrect() {
     if (this.isSilenced || !this.soundEnabled) return;
+    const now = Date.now();
+    // Debounce to ensure incorrect sound only plays once if triggered in rapid succession
+    if (now - this.lastIncorrectTime < 1200) {
+      return;
+    }
+    this.lastIncorrectTime = now;
+
     try {
       if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});

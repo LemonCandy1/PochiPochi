@@ -67,6 +67,20 @@ export function getRandomDistractorLetter(): string {
   return WEIGHTED_LETTER_POOL[index] || 'E';
 }
 
+export const MAX_DYNAMIC_LETTERS = 8;
+
+export function generateDynamicLetterChoices(neededLetter: string, totalChoices = 6): string[] {
+  const upperNeeded = neededLetter.toUpperCase();
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const distractors = alphabet.filter((l) => l !== upperNeeded);
+  const shuffledDistractors = shuffleArray(distractors).slice(0, totalChoices - 1);
+  return shuffleArray([upperNeeded, ...shuffledDistractors]);
+}
+
+export function shouldAutocomplete(currentTypedLength: number, totalAnswerLength: number): boolean {
+  return currentTypedLength >= Math.min(totalAnswerLength, MAX_DYNAMIC_LETTERS);
+}
+
 export function generateAnswerMatrix(answer: string, gridSize = 16): MatrixTile[] {
   const cleanAnswer = cleanAnswerString(answer);
   const answerLetters = cleanAnswer.split('');
@@ -86,3 +100,4 @@ export function generateAnswerMatrix(answer: string, gridSize = 16): MatrixTile[
     isUsed: false,
   }));
 }
+

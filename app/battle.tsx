@@ -27,11 +27,17 @@ export default function BattleScreen() {
   const [inGame, setInGame] = useState(false);
   const [playerName, setPlayerName] = useState('PochiMaster');
   const [roomCode, setRoomCode] = useState('quick-match');
-  const [serverUrl, setServerUrl] = useState(
-    Platform.OS === 'web' && typeof window !== 'undefined'
-      ? `ws://${window.location.hostname || 'localhost'}:4001`
-      : 'ws://localhost:4001'
-  );
+  const [serverUrl, setServerUrl] = useState(() => {
+    if (process.env.EXPO_PUBLIC_BATTLE_WS_URL) {
+      return process.env.EXPO_PUBLIC_BATTLE_WS_URL;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const isSecure = window.location.protocol === 'https:';
+      const host = window.location.hostname || 'localhost';
+      return `${isSecure ? 'wss:' : 'ws:'}//${host}:4001`;
+    }
+    return 'ws://localhost:4001';
+  });
 
   if (inGame) {
     return (
@@ -39,7 +45,10 @@ export default function BattleScreen() {
         serverUrl={serverUrl}
         roomId={roomCode.trim() || 'quick-match'}
         playerName={playerName.trim() || 'PochiPlayer'}
-        onExit={() => setInGame(false)}
+        onExit={() => {
+          setInGame(false);
+          router.replace('/(tabs)');
+        }}
       />
     );
   }
@@ -49,7 +58,7 @@ export default function BattleScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => router.replace('/(tabs)')}
           style={({ pressed }) => [styles.backBtn, pressed && { opacity: 0.7 }]}
         >
           <ArrowLeft size={20} color={Colors.ink} />
@@ -69,10 +78,6 @@ export default function BattleScreen() {
               <Zap size={12} color="#FFFFFF" fill="#FFFFFF" />
               <Text style={styles.modeBadgeText}>LIVE ARENA</Text>
             </View>
-            <View style={styles.ntpBadge}>
-              <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
-              <Text style={styles.ntpBadgeText}>NTP 60MS ARBITRATION</Text>
-            </View>
           </View>
 
           <View style={styles.mascotBanner}>
@@ -87,11 +92,11 @@ export default function BattleScreen() {
 
           {/* Form Inputs */}
           <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>PLAYER CALLSIGN</Text>
+            <Text style={styles.inputLabel}>PLAYER NAME</Text>
             <TextInput
               value={playerName}
               onChangeText={setPlayerName}
-              placeholder="Enter your callsign"
+              placeholder="Enter your name"
               placeholderTextColor="#94A3B8"
               style={styles.textInput}
               maxLength={16}
