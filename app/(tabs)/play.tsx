@@ -1,5 +1,6 @@
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Flame, Settings, Sparkles } from 'lucide-react-native';
+import { Flame, Settings } from 'lucide-react-native';
+import { FlaticonIcon } from '../../src/components/icons/FlaticonIcon';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
@@ -275,7 +276,7 @@ export default function PlayScreen() {
           </View>
           {currentQuestion.difficulty_tier && (
             <View style={styles.introTierBadge}>
-              <Sparkles size={11} color={Colors.gold} />
+              <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
               <Text style={styles.introTierBadgeText}>
                 {currentQuestion.difficulty_tier === 'extremely_easy'
                   ? 'LEVEL 1'

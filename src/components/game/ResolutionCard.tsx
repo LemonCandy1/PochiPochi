@@ -4,7 +4,6 @@ import {
   ExternalLink,
   Flag,
   Share2,
-  Sparkles,
 } from 'lucide-react-native';
 import React from 'react';
 import {
@@ -15,6 +14,7 @@ import {
   View,
 } from 'react-native';
 import { SpeedLightningIcon } from '../icons/CategoryIcons';
+import { FlaticonIcon } from '../icons/FlaticonIcon';
 import { Colors, Shadows } from '../../theme/colors';
 import { Fonts } from '../../theme/typography';
 import { EloChangeResult, Question } from '../../types';
@@ -104,7 +104,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
       {/* Dynamic Special Introductory Category Banner */}
       {question.difficulty_tier && (
         <View style={styles.introCategoryBanner}>
-          <Sparkles size={13} color="#B45309" />
+          <FlaticonIcon name="sparkles" size={13} color="#B45309" variant="solid" />
           <Text style={styles.introCategoryBannerText}>
             {question.difficulty_tier === 'extremely_easy'
               ? 'SPECIAL INTRODUCTORY • LEVEL 1: EXTREMELY EASY'

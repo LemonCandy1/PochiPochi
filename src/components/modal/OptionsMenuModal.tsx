@@ -6,7 +6,6 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  Sparkles,
   Volume2,
   VolumeX,
   X,
@@ -22,6 +21,7 @@ import {
 } from 'react-native';
 import { Colors, Shadows } from '../../theme/colors';
 import { Fonts } from '../../theme/typography';
+import { FlaticonIcon } from '../icons/FlaticonIcon';
 import { UserProfile } from '../../types';
 import { SupabaseService } from '../../services/supabase/supabaseClient';
 import { PochiRepository } from '../../data/repository';
@@ -200,7 +200,7 @@ export const OptionsMenuModal: React.FC<OptionsMenuModalProps> = ({
               pressed && styles.btnPressed,
             ]}
           >
-            <Sparkles size={16} color={Colors.primaryDark} />
+            <FlaticonIcon name="sparkles" size={16} color={Colors.primaryDark} variant="solid" />
             <Text style={styles.replayFtueText}>Test / Replay Onboarding Tour</Text>
           </Pressable>
 

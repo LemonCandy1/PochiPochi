@@ -7,6 +7,7 @@
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo-google-fonts/space-mono": "^0.4.2",
     "@expo/metro-runtime": "~57.0.15",
+    "@flaticon/flaticon-uicons": "^3.3.1",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.115.0",
     "@types/react-dom": "^19.2.7",
@@ -36,7 +37,13 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "battle:server": "npx -y tsx server/server.ts",
+    "battle:test": "npx -y tsx tests/test_battle_suite.ts",
+    "battle:e2e": "npx -y tsx tests/test_battle_e2e.ts",
+    "minhaya:server": "npx -y tsx server/server.ts",
+    "minhaya:test": "npx -y tsx tests/test_battle_suite.ts",
+    "minhaya:e2e": "npx -y tsx tests/test_battle_e2e.ts"
   },
   "private": true
 }

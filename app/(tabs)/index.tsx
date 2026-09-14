@@ -28,6 +28,7 @@ import {
 import { CATEGORIES } from '../../src/data/questions';
 import { PochiRepository } from '../../src/data/repository';
 import { getEloRankTier } from '../../src/engine/eloEngine';
+import { FlaticonIcon } from '../../src/components/icons/FlaticonIcon';
 import { Colors, Shadows } from '../../src/theme/colors';
 import { Fonts } from '../../src/theme/typography';
 import { Category, UserProfile } from '../../src/types';
@@ -142,6 +143,37 @@ export default function HomeScreen() {
             <Text style={styles.timerLabel}>RESETS IN</Text>
           </View>
         </View>
+
+        {/* Pochi 1v1 Battle Arena CTA */}
+        <Pressable
+          onPress={() => router.push('/battle')}
+          style={({ pressed }) => [
+            styles.battleCard,
+            pressed && styles.buttonPressed,
+          ]}
+        >
+          <View style={styles.battleBadgeRow}>
+            <View style={styles.battleBadge}>
+              <Zap size={12} color="#FFFFFF" fill="#FFFFFF" />
+              <Text style={styles.battleBadgeText}>LIVE BATTLE</Text>
+            </View>
+            <View style={styles.battleNtpBadge}>
+              <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
+              <Text style={styles.battleNtpBadgeText}>NTP 60MS ARBITRATION</Text>
+            </View>
+          </View>
+          <View style={styles.battleContentRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.battleTitle}>Pochi 1v1 Battle Arena</Text>
+              <Text style={styles.battleSub}>
+                Live streaming clues, 4x4 matrix keypad & real-time hardware buzz arbitration
+              </Text>
+            </View>
+            <View style={styles.battlePlayIcon}>
+              <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+            </View>
+          </View>
+        </Pressable>
 
         {/* Endless Quick Play CTA */}
         <Pressable
@@ -647,5 +679,85 @@ const styles = StyleSheet.create({
   },
   syncingText: {
     color: Colors.inkSecondary,
+  },
+  battleCard: {
+    backgroundColor: Colors.card,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    ...Shadows.cardElevated,
+    gap: 10,
+  },
+  battleBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  battleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  battleBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  battleNtpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.goldLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+  },
+  battleNtpBadgeText: {
+    fontFamily: Fonts.mono,
+    fontSize: 9,
+    fontWeight: '800',
+    color: Colors.goldDark,
+    letterSpacing: 0.5,
+  },
+  battleContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  battleTitle: {
+    fontFamily: Fonts.heading,
+    fontSize: 16,
+    color: Colors.ink,
+    letterSpacing: -0.2,
+  },
+  battleSub: {
+    fontFamily: Fonts.body,
+    fontSize: 11,
+    color: Colors.inkSecondary,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  battlePlayIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.primaryDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
   },
 });

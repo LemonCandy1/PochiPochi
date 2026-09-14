@@ -9,11 +9,11 @@ import {
   Clock,
   ExternalLink,
   Flame,
-  Sparkles,
   Trophy,
   XCircle,
   Zap,
 } from 'lucide-react-native';
+import { FlaticonIcon } from '../src/components/icons/FlaticonIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -825,7 +825,7 @@ export default function FTUEScreen() {
                 <View style={styles.badgeCluster}>
                   <Text style={styles.clueCategoryBadge}>{currentQ.category.toUpperCase()}</Text>
                   <View style={styles.introTierBadge}>
-                    <Sparkles size={11} color={Colors.gold} />
+                    <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
                     <Text style={styles.introTierBadgeText}>
                       {currentQ.difficulty_tier === 'extremely_easy'
                         ? 'LEVEL 1: EXTREMELY EASY'
