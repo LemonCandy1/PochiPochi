@@ -19,12 +19,12 @@ const DEFAULT_PROFILE: UserProfile = {
   id: 'solo-player-1',
   username: 'PochiMaster',
   avatar: 'smart-labrador',
-  overall_elo: 1200,
+  overall_elo: 350,
   category_elos: {
-    science: 1200,
-    geography: 1200,
-    anime: 1200,
-    general: 1200,
+    science: 350,
+    geography: 350,
+    anime: 350,
+    general: 350,
   },
   total_played: 0,
   total_correct: 0,
@@ -39,7 +39,30 @@ export class PochiRepository {
   private static questionsCache: Question[] | null = null;
   private static profileCache: UserProfile | null = null;
   private static bookmarksCache: Bookmark[] | null = null;
+  private static bookmarkListeners: Array<(bookmarks: Bookmark[]) => void> = [];
   private static attemptedKeysCache: Set<string> | null = null;
+
+  static subscribeToBookmarks(listener: (bookmarks: Bookmark[]) => void): () => void {
+    this.bookmarkListeners.push(listener);
+    if (this.bookmarksCache) {
+      listener(this.bookmarksCache);
+    } else {
+      this.getBookmarks().then((b) => listener(b)).catch(() => {});
+    }
+    return () => {
+      this.bookmarkListeners = this.bookmarkListeners.filter((l) => l !== listener);
+    };
+  }
+
+  private static notifyBookmarkListeners(bookmarks: Bookmark[]) {
+    this.bookmarkListeners.forEach((l) => {
+      try {
+        l(bookmarks);
+      } catch (e) {
+        console.warn('Error notifying bookmark listener', e);
+      }
+    });
+  }
 
   static async getProfile(): Promise<UserProfile> {
     if (this.profileCache) return this.profileCache;
@@ -125,9 +148,9 @@ export class PochiRepository {
       }
     });
 
-    // If Supabase is configured, pull randomized questions across the 1000+ question dataset
+    // If Supabase is configured, pull randomized questions across the 4,600+ question dataset
     if (SupabaseService.isConfigured()) {
-      const initialOffset = Math.floor(Math.random() * 900);
+      const initialOffset = Math.floor(Math.random() * 4500);
       SupabaseService.fetchQuestions({ limit: 50, offset: initialOffset })
         .then((remoteQuestions) => {
           if (remoteQuestions.length > 0 && this.questionsCache) {
@@ -458,6 +481,11 @@ export class PochiRepository {
       }
     }
 
+    const targetElo =
+      categoryFilter === 'all'
+        ? profile.overall_elo
+        : profile.category_elos[categoryFilter] ?? profile.overall_elo;
+
     let candidatePool = questions.filter(
       (q) =>
         !allExcludes.has(q.id.toLowerCase()) &&
@@ -467,16 +495,27 @@ export class PochiRepository {
       candidatePool = candidatePool.filter((q) => q.category === categoryFilter);
     }
 
-    // Proactively pull fresh questions from Supabase if candidate pool is running low
-    if (candidatePool.length <= 25 && SupabaseService.isConfigured()) {
+    // Filter candidate pool to those close to player Elo (+/- 250 Elo)
+    const eloCloseCandidates = candidatePool.filter(
+      (q) => Math.abs(q.elo_rating - targetElo) <= 250
+    );
+
+    // Proactively pull fresh questions from Supabase if candidate pool is running low or lacks Elo-matched questions
+    if ((candidatePool.length <= 25 || eloCloseCandidates.length < 5) && SupabaseService.isConfigured()) {
       try {
-        // Random offset across the Supabase questions table (1000+ questions in geography/all)
-        const isBroad = categoryFilter === 'geography' || categoryFilter === 'all';
-        const maxOffset = isBroad ? 950 : 0;
+        // Calculate max random offset based on database size for the category
+        let maxOffset = 0;
+        if (categoryFilter === 'all') {
+          maxOffset = 1950;
+        } else if (categoryFilter === 'science' || categoryFilter === 'geography') {
+          maxOffset = 950;
+        }
         const randomOffset = maxOffset > 0 ? Math.floor(Math.random() * maxOffset) : 0;
+
+        // Query Supabase across the entire table for endless, or for the specific category
         const remoteQuestions = await SupabaseService.fetchQuestions({
           category: categoryFilter,
-          limit: 30,
+          limit: 40,
           offset: randomOffset,
         });
 
@@ -541,17 +580,14 @@ export class PochiRepository {
       }
     }
 
-    const targetElo =
-      categoryFilter === 'all'
-        ? profile.overall_elo
-        : profile.category_elos[categoryFilter] ?? profile.overall_elo;
-
     // Sort by smallest Elo difference to match player skill level
     candidatePool.sort(
       (a, b) => Math.abs(a.elo_rating - targetElo) - Math.abs(b.elo_rating - targetElo)
     );
 
-    const topChoices = candidatePool.slice(0, Math.min(3, candidatePool.length));
+    // Pick randomly from top 5 closest Elo matches for true variety
+    const topPoolSize = Math.min(5, candidatePool.length);
+    const topChoices = candidatePool.slice(0, topPoolSize);
     const selected = topChoices[Math.floor(Math.random() * topChoices.length)];
 
     const targetQ = selected || questions[0];
@@ -562,8 +598,8 @@ export class PochiRepository {
     };
   }
 
-  static async getBookmarks(): Promise<Bookmark[]> {
-    if (this.bookmarksCache) return this.bookmarksCache;
+  static async getBookmarks(forceRefresh = false): Promise<Bookmark[]> {
+    if (this.bookmarksCache && !forceRefresh) return this.bookmarksCache;
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.BOOKMARKS);
       if (data) {
@@ -617,8 +653,9 @@ export class PochiRepository {
       }
     }
 
-    this.bookmarksCache = bookmarks;
-    await AsyncStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarks));
+    this.bookmarksCache = [...bookmarks];
+    this.notifyBookmarkListeners(this.bookmarksCache);
+    await AsyncStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(this.bookmarksCache));
     return isSaved;
   }
 

@@ -54,7 +54,7 @@ export default function LeaderboardScreen() {
     setRefreshing(false);
   };
 
-  const userElo = profile?.overall_elo ?? 1200;
+  const userElo = profile?.overall_elo ?? 350;
   const rankTier = getEloRankTier(userElo);
   const topChampion = entries[0] ?? {
     username: 'PochiMaster_99',

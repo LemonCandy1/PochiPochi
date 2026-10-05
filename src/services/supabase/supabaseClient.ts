@@ -101,6 +101,9 @@ export class SupabaseService {
     category?: Category | 'all';
     limit?: number;
     offset?: number;
+    minElo?: number;
+    maxElo?: number;
+    targetElo?: number;
   }): Promise<Question[]> {
     if (!this.isConfigured()) return [];
 
@@ -110,6 +113,13 @@ export class SupabaseService {
 
       if (params.category && params.category !== 'all') {
         query = query.eq('category', params.category);
+      }
+
+      if (typeof params.minElo === 'number') {
+        query = query.gte('elo_rating', params.minElo);
+      }
+      if (typeof params.maxElo === 'number') {
+        query = query.lte('elo_rating', params.maxElo);
       }
 
       const limit = params.limit || 20;
@@ -138,13 +148,36 @@ export class SupabaseService {
         ),
         wikipedia_url: formatWikipediaUrl(row.answer, row.wikipedia_url),
         context_summary: row.context_summary,
-        elo_rating: row.elo_rating ?? 1200,
+        elo_rating: row.elo_rating ?? 350,
         times_served: row.times_served ?? 0,
         times_correct: row.times_correct ?? 0,
       }));
     } catch (e) {
       console.warn('[Supabase] Exception fetching questions:', e);
       return [];
+    }
+  }
+
+  /**
+   * Fetches total count of questions in Supabase
+   */
+  public static async getQuestionCount(category?: Category | 'all'): Promise<number> {
+    if (!this.isConfigured()) return 0;
+    try {
+      const client = this.getClient();
+      let query = client.from('questions').select('id', { count: 'exact', head: true });
+      if (category && category !== 'all') {
+        query = query.eq('category', category);
+      }
+      const { count, error } = await query;
+      if (error) {
+        console.warn('[Supabase] Failed to get question count:', error);
+        return 0;
+      }
+      return count ?? 0;
+    } catch (e) {
+      console.warn('[Supabase] Exception getting question count:', e);
+      return 0;
     }
   }
 

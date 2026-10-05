@@ -5,6 +5,7 @@ import {
   Compass,
   Database,
   FlaskConical,
+  Menu,
   Play,
   RefreshCw,
   Settings,
@@ -95,21 +96,26 @@ export default function HomeScreen() {
           </View>
           <View style={styles.headerRight}>
             <View style={styles.eloPill}>
-              <Text style={styles.eloNumber}>{profile?.overall_elo ?? 1200}</Text>
+              <Text style={styles.eloNumber}>{profile?.overall_elo ?? 350}</Text>
               <Text style={styles.eloText}>ELO</Text>
             </View>
             <Pressable
               onPress={() => setOptionsModalVisible(true)}
               style={({ pressed }) => [
-                styles.settingsBtn,
-                pressed && { opacity: 0.7 },
+                styles.menuBtn,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.96 }] },
               ]}
+              accessibilityLabel="Open Menu"
             >
-              <Settings size={20} color={Colors.ink} />
+              <Menu size={16} color={Colors.ink} strokeWidth={2.5} />
+              <Text style={styles.menuBtnText}>MENU</Text>
             </Pressable>
-            <View style={styles.avatarCircle}>
+            <Pressable
+              onPress={() => setOptionsModalVisible(true)}
+              style={styles.avatarCircle}
+            >
               <PochiLabrador size={38} expression="happy" />
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -125,7 +131,12 @@ export default function HomeScreen() {
               Buzz early for maximum bonus Elo!
             </Text>
             <Pressable
-              onPress={() => handleStartGame('all')}
+              onPress={() => {
+                router.push({
+                  pathname: '/(tabs)/play',
+                  params: { category: 'all', mode: 'daily' },
+                });
+              }}
               style={({ pressed }) => [
                 styles.dailyButton,
                 pressed && styles.buttonPressed,
@@ -374,6 +385,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.card,
+  },
+  menuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.borderDark,
+    backgroundColor: Colors.card,
+    ...Shadows.card,
+  },
+  menuBtnText: {
+    fontFamily: Fonts.heading,
+    fontSize: 12,
+    color: Colors.ink,
+    letterSpacing: 0.5,
   },
   dailyCard: {
     backgroundColor: Colors.primary,

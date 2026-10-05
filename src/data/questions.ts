@@ -243,7 +243,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Sun',
       context_summary:
         'The Sun is the star at the center of the Solar System. It is an almost perfect sphere of hot plasma, powered by nuclear fusion of hydrogen into helium in its core.',
-      elo_rating: 850,
+      elo_rating: 250,
       difficulty_tier: 'extremely_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -262,7 +262,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Gravity',
       context_summary:
         'Gravity is a fundamental interaction that causes mutual attraction between all things that have mass. On Earth, gravity gives weight to physical objects.',
-      elo_rating: 1050,
+      elo_rating: 380,
       difficulty_tier: 'very_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -281,7 +281,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Penicillin',
       context_summary:
         'Penicillin revolutionized modern medicine by curing previously fatal bacterial infections. Fleming was awarded the 1945 Nobel Prize in Physiology or Medicine for its discovery.',
-      elo_rating: 1250,
+      elo_rating: 520,
       difficulty_tier: 'medium',
       is_ftue_placement: true,
       is_introductory: true,
@@ -303,7 +303,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Paris',
       context_summary:
         'Paris is the capital of France and has stood as one of the world\'s major centers of art, fashion, gastronomy, and culture since the 17th century.',
-      elo_rating: 850,
+      elo_rating: 250,
       difficulty_tier: 'extremely_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -322,7 +322,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Nile',
       context_summary:
         'The Nile River provided fresh water, irrigation, and fertile soil indispensable for the rise of ancient Egyptian civilization over five millennia ago.',
-      elo_rating: 1050,
+      elo_rating: 380,
       difficulty_tier: 'very_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -341,7 +341,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Mount_Everest',
       context_summary:
         'Mount Everest attracts mountaineers from across the globe. Known in Nepal as Sagarmatha and in Tibet as Chomolungma, it was first officially summited by Edmund Hillary and Tenzing Norgay in 1953.',
-      elo_rating: 1250,
+      elo_rating: 520,
       difficulty_tier: 'medium',
       is_ftue_placement: true,
       is_introductory: true,
@@ -363,7 +363,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Pikachu',
       context_summary:
         'Pikachu is the central mascot of the Pokémon franchise and is widely regarded as one of the most recognizable animated characters in modern history.',
-      elo_rating: 850,
+      elo_rating: 250,
       difficulty_tier: 'extremely_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -382,7 +382,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Naruto',
       context_summary:
         'Naruto is one of the best-selling manga series of all time, chronicling the journey of Naruto Uzumaki, a host for the powerful Nine-Tailed Fox spirit.',
-      elo_rating: 1050,
+      elo_rating: 380,
       difficulty_tier: 'very_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -401,7 +401,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Spirited_Away',
       context_summary:
         'Spirited Away is universally celebrated as a pinnacle of cinematic animation and remains the only hand-drawn, non-English-language film to win the Oscar for Best Animated Feature.',
-      elo_rating: 1250,
+      elo_rating: 520,
       difficulty_tier: 'medium',
       is_ftue_placement: true,
       is_introductory: true,
@@ -423,7 +423,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Mona_Lisa',
       context_summary:
         'The Mona Lisa is an archetype of Italian High Renaissance portraiture. It has been described as the best-known, most-visited, and most-written-about work of art in human history.',
-      elo_rating: 850,
+      elo_rating: 250,
       difficulty_tier: 'extremely_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -442,7 +442,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/Egyptian_pyramids',
       context_summary:
         'The Great Pyramid of Giza was built over 4,500 years ago during the Fourth Dynasty of the Old Kingdom of Egypt and remained the tallest human-made structure for over 3,800 years.',
-      elo_rating: 1050,
+      elo_rating: 380,
       difficulty_tier: 'very_easy',
       is_ftue_placement: true,
       is_introductory: true,
@@ -461,7 +461,7 @@ export const FTUE_PLACEMENT_QUESTIONS: Record<Category, Question[]> = {
       wikipedia_url: 'https://en.wikipedia.org/wiki/William_Shakespeare',
       context_summary:
         'William Shakespeare is widely regarded as the greatest playwright in world literature. His works explore the complete spectrum of human emotion and have been translated into every major living language.',
-      elo_rating: 1250,
+      elo_rating: 520,
       difficulty_tier: 'medium',
       is_ftue_placement: true,
       is_introductory: true,

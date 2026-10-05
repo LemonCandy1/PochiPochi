@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Flame, Settings } from 'lucide-react-native';
 import { FlaticonIcon } from '../../src/components/icons/FlaticonIcon';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,6 +13,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AnswerMask } from '../../src/components/game/AnswerMask';
 import { AnswerSelection } from '../../src/components/game/AnswerSelection';
 import { ClueStreamer } from '../../src/components/game/ClueStreamer';
+import {
+  DailyTriviaQuestionResult,
+  DailyTriviaStatsView,
+} from '../../src/components/game/DailyTriviaStatsView';
 import { ResolutionCard } from '../../src/components/game/ResolutionCard';
 import {
   CategoryIcon,
@@ -24,7 +28,11 @@ import {
 import { OptionsMenuModal } from '../../src/components/modal/OptionsMenuModal';
 import { ReportModal } from '../../src/components/modal/ReportModal';
 import { PochiRepository } from '../../src/data/repository';
-import { calculateDualElo, getSpeedMultiplier } from '../../src/engine/eloEngine';
+import {
+  calculateDualElo,
+  calculateGlobalCorrectPercentage,
+  getSpeedMultiplier,
+} from '../../src/engine/eloEngine';
 import { Colors, Shadows } from '../../src/theme/colors';
 import { Fonts } from '../../src/theme/typography';
 import {
@@ -39,8 +47,10 @@ import { randomizeQuestionOptions } from '../../src/utils/shuffle';
 type GameState = 'streaming' | 'resolved';
 
 export default function PlayScreen() {
-  const params = useLocalSearchParams<{ category?: string }>();
+  const params = useLocalSearchParams<{ category?: string; mode?: string }>();
   const activeCategory = (params.category as Category) || 'all';
+  const isDailyMode = params.mode === 'daily';
+  const TOTAL_DAILY_QUESTIONS = 10;
 
   const [gameState, setGameState] = useState<GameState>('streaming');
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -55,6 +65,11 @@ export default function PlayScreen() {
   const [revealedIndices, setRevealedIndices] = useState<number[]>([]);
   const [isScreenFocused, setIsScreenFocused] = useState<boolean>(true);
   const [isLoadingNext, setIsLoadingNext] = useState<boolean>(false);
+
+  // Daily Trivia Session State
+  const [dailyRoundIndex, setDailyRoundIndex] = useState<number>(0);
+  const [dailyResults, setDailyResults] = useState<DailyTriviaQuestionResult[]>([]);
+  const [isDailyComplete, setIsDailyComplete] = useState<boolean>(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const currentRatioRef = useRef<number>(0);
@@ -237,15 +252,72 @@ export default function PlayScreen() {
         currentQuestion.id,
         currentQuestion.clue_text
       );
+
+      // Record in Daily Trivia session if in daily mode
+      if (isDailyMode) {
+        const globalPct = calculateGlobalCorrectPercentage(currentQuestion);
+        setDailyResults((prev) => [
+          ...prev,
+          {
+            question: currentQuestion,
+            selectedAnswer: answerOption,
+            isCorrect: correct,
+            speedMultiplier: eloCalc.speedMultiplier,
+            globalPercentage: globalPct,
+            eloDelta: eloCalc.deltaPlayer,
+          },
+        ]);
+      }
     },
-    [gameState, currentQuestion, profile]
+    [gameState, currentQuestion, profile, isDailyMode]
   );
+
+  const handleProceedNext = () => {
+    if (isDailyMode) {
+      if (dailyRoundIndex >= TOTAL_DAILY_QUESTIONS - 1) {
+        setIsDailyComplete(true);
+        return;
+      }
+      setDailyRoundIndex((prev) => prev + 1);
+    }
+    loadNextQuestion();
+  };
 
   const handleToggleBookmark = async () => {
     if (!currentQuestion) return;
     const saved = await PochiRepository.toggleBookmark(currentQuestion);
     setIsBookmarked(saved);
   };
+
+  if (isDailyMode && isDailyComplete && profile) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <DailyTriviaStatsView
+          results={dailyResults}
+          profile={profile}
+          onPlayUnlimited={() => {
+            setIsDailyComplete(false);
+            setDailyRoundIndex(0);
+            setDailyResults([]);
+            router.setParams({ mode: 'unlimited' });
+            loadNextQuestion();
+          }}
+          onReviewNotebook={() => {
+            router.push('/(tabs)/bookmarks');
+          }}
+          onPlayAgain={() => {
+            setIsDailyComplete(false);
+            setDailyRoundIndex(0);
+            setDailyResults([]);
+            loadNextQuestion();
+          }}
+          onGoHome={() => {
+            router.replace('/(tabs)');
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (!currentQuestion || !profile) {
     return (
@@ -268,13 +340,21 @@ export default function PlayScreen() {
       {/* Top Game Bar */}
       <View style={styles.topGameBar}>
         <View style={styles.leftCluster}>
-          <View style={styles.categoryBadge}>
-            <CategoryIcon category={currentQuestion.category} size={14} color={Colors.primaryDark} />
-            <Text style={styles.categoryBadgeText}>
-              {currentQuestion.category.toUpperCase()}
-            </Text>
-          </View>
-          {currentQuestion.difficulty_tier && (
+          {isDailyMode ? (
+            <View style={styles.dailyCounterBadge}>
+              <Text style={styles.dailyCounterText}>
+                DAILY {dailyRoundIndex + 1}/{TOTAL_DAILY_QUESTIONS}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.categoryBadge}>
+              <CategoryIcon category={currentQuestion.category} size={14} color={Colors.primaryDark} />
+              <Text style={styles.categoryBadgeText}>
+                {currentQuestion.category.toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {currentQuestion.difficulty_tier && !isDailyMode && (
             <View style={styles.introTierBadge}>
               <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
               <Text style={styles.introTierBadgeText}>
@@ -307,6 +387,27 @@ export default function PlayScreen() {
           </View>
         </View>
       </View>
+
+      {/* 10-Question Segmented Progress Bar for Daily Trivia */}
+      {isDailyMode && (
+        <View style={styles.dailyProgressRow}>
+          {Array.from({ length: TOTAL_DAILY_QUESTIONS }).map((_, i) => {
+            const isFinished = i < dailyResults.length;
+            const isCurrent = i === dailyRoundIndex && !isFinished;
+            const res = dailyResults[i];
+            return (
+              <View
+                key={`seg-${i}`}
+                style={[
+                  styles.dailyProgressSeg,
+                  isFinished && (res?.isCorrect ? styles.segCorrect : styles.segIncorrect),
+                  isCurrent && styles.segCurrent,
+                ]}
+              />
+            );
+          })}
+        </View>
+      )}
 
       <ScrollView
         ref={scrollViewRef}
@@ -397,9 +498,16 @@ export default function PlayScreen() {
             eloResult={eloResult}
             isBookmarked={isBookmarked}
             isLoadingNext={isLoadingNext}
+            nextButtonLabel={
+              isDailyMode
+                ? dailyRoundIndex >= TOTAL_DAILY_QUESTIONS - 1
+                  ? 'SEE DAILY STATS (10/10) →'
+                  : `QUESTION ${dailyRoundIndex + 2} / 10 →`
+                : undefined
+            }
             onToggleBookmark={handleToggleBookmark}
             onOpenReport={() => setReportModalVisible(true)}
-            onNextQuestion={loadNextQuestion}
+            onNextQuestion={handleProceedNext}
           />
         )}
       </ScrollView>
@@ -463,6 +571,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  dailyCounterBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  dailyCounterText: {
+    fontFamily: Fonts.heading,
+    fontSize: 11,
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  dailyProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    gap: 4,
+    backgroundColor: Colors.backgroundSecondary,
+    borderBottomWidth: 1,
+    borderColor: Colors.border,
+  },
+  dailyProgressSeg: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+  },
+  segCurrent: {
+    backgroundColor: Colors.primary,
+    height: 5,
+  },
+  segCorrect: {
+    backgroundColor: Colors.correct,
+  },
+  segIncorrect: {
+    backgroundColor: Colors.incorrect,
   },
   categoryBadgeText: {
     fontFamily: Fonts.heading,

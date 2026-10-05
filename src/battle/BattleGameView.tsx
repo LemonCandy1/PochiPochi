@@ -23,11 +23,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Check, Copy, Settings } from 'lucide-react-native';
+import { ArrowLeft, Check, Settings, Share2 } from 'lucide-react-native';
 import { BattleDynamicTyping } from './BattleDynamicTyping';
 import { BattleKeypad } from './BattleKeypad';
 import { BattleMultiChoice } from './BattleMultiChoice';
-import { useBattleClient } from './useBattleClient';
+import { shareInvite } from './invite';
+import { BattleJoinMode, useBattleClient } from './useBattleClient';
 import { FlaticonIcon } from '../components/icons/FlaticonIcon';
 import {
   CategoryIcon,
@@ -42,19 +43,29 @@ import { BattleInputMode, Category, UserProfile } from '../types';
 
 interface BattleGameViewProps {
   serverUrl?: string;
+  mode?: BattleJoinMode;
   roomId?: string;
+  password?: string;
   playerName?: string;
   onExit?: () => void;
+  /** Called when the server rejects the join (wrong password, room full, ...) */
+  onJoinError?: (message: string) => void;
 }
 
 export const BattleGameView: React.FC<BattleGameViewProps> = ({
   serverUrl = 'ws://localhost:4001',
-  roomId = 'quick-match',
+  mode = 'quick',
+  roomId: requestedRoomId = '',
+  password = '',
   playerName = 'PochiPlayer',
   onExit,
+  onJoinError,
 }) => {
   const {
     connectionStatus,
+    roomCode,
+    isPrivateRoom,
+    joinError,
     rtt,
     clockOffset,
     isNtpCalibrated,
@@ -87,24 +98,31 @@ export const BattleGameView: React.FC<BattleGameViewProps> = ({
     sendKeystroke,
   } = useBattleClient({
     serverUrl,
-    roomId,
+    mode,
+    roomId: requestedRoomId,
+    password,
     playerName,
   });
+
+  const roomId = roomCode || requestedRoomId || '…';
+
+  useEffect(() => {
+    if (joinError) onJoinError?.(joinError);
+  }, [joinError, onJoinError]);
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [battleInputMode, setBattleInputMode] = useState<BattleInputMode>('matrix');
   const [optionsModalVisible, setOptionsModalVisible] = useState<boolean>(false);
   const [hasCopied, setHasCopied] = useState<boolean>(false);
 
-  const handleCopyRoomCode = useCallback(() => {
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(roomId);
-      }
+  const handleShareInvite = useCallback(async () => {
+    if (!roomCode) return;
+    const result = await shareInvite(roomCode, password);
+    if (result === 'copied') {
       setHasCopied(true);
       setTimeout(() => setHasCopied(false), 2000);
-    } catch {}
-  }, [roomId]);
+    }
+  }, [roomCode, password]);
 
   useEffect(() => {
     PochiRepository.getProfile().then((p) => {
@@ -164,7 +182,9 @@ export const BattleGameView: React.FC<BattleGameViewProps> = ({
     if (roomState === 'LOBBY') {
       return opponentPlayer
         ? `Matched against ${opponentPlayer.name}! Match starting soon...`
-        : 'Waiting for a challenger to enter the 1v1 Battle Arena...';
+        : isPrivateRoom
+        ? "Send your friend the room code and password. I'll wait right here!"
+        : "Looking for a challenger... I'll spar with you if nobody shows up!";
     }
     if (roomState === 'ROUND_INTRO') {
       return `Round ${round}! Clue incoming against ${opponentPlayer?.name || 'your opponent'}!`;
@@ -229,7 +249,11 @@ export const BattleGameView: React.FC<BattleGameViewProps> = ({
           <View style={styles.roundTierBadge}>
             <FlaticonIcon name="sparkles" size={11} color={Colors.gold} variant="solid" />
             <Text style={styles.roundTierBadgeText}>
-              {roomState === 'LOBBY' ? `ROOM: ${roomId}` : `ROUND ${round || 1}/${totalRounds || 10}`}
+              {roomState === 'LOBBY'
+                ? isPrivateRoom
+                  ? `ROOM: ${roomId}`
+                  : 'QUICK MATCH'
+                : `ROUND ${round || 1}/${totalRounds || 10}`}
             </Text>
           </View>
 
@@ -338,7 +362,7 @@ export const BattleGameView: React.FC<BattleGameViewProps> = ({
             </View>
             <View style={styles.matchupInfoCol}>
               <Text style={styles.matchupOpponentRoleTag}>
-                {opponentPlayer ? 'OPPONENT' : `ROOM: ${roomId}`}
+                {opponentPlayer ? 'OPPONENT' : isPrivateRoom ? `ROOM: ${roomId}` : 'QUICK MATCH'}
               </Text>
               <Text style={styles.matchupPlayerName} numberOfLines={1}>
                 {opponentPlayer ? opponentPlayer.name : 'Waiting for challenger...'}
@@ -368,38 +392,58 @@ export const BattleGameView: React.FC<BattleGameViewProps> = ({
               </Text>
             </View>
 
-            <View style={styles.roomCodeBox}>
-              <Text style={styles.roomCodeLabel}>BATTLE ROOM CODE</Text>
-              <View style={styles.roomCodeRow}>
-                <Text style={styles.roomCodeValue}>{roomId}</Text>
-                <Pressable
-                  onPress={handleCopyRoomCode}
-                  style={({ pressed }) => [
-                    styles.copyBtn,
-                    pressed && styles.copyBtnPressed,
-                  ]}
-                >
-                  {hasCopied ? (
-                    <Check size={13} color={Colors.correct} />
-                  ) : (
-                    <Copy size={13} color={Colors.primaryDark} />
-                  )}
-                  <Text
-                    style={[
-                      styles.copyBtnText,
-                      hasCopied && styles.copyBtnTextSuccess,
+            {isPrivateRoom && (
+              <View style={styles.roomCodeBox}>
+                <View style={styles.roomCodeRow}>
+                  <View>
+                    <Text style={styles.roomCodeLabel}>ROOM CODE</Text>
+                    <Text style={styles.roomCodeValue} selectable>
+                      {roomId}
+                    </Text>
+                  </View>
+                  <View>
+                    <Text style={styles.roomCodeLabel}>PASSWORD</Text>
+                    <Text style={styles.roomCodeValue} selectable>
+                      {password}
+                    </Text>
+                  </View>
+                </View>
+                {!opponentPlayer && (
+                  <Pressable
+                    onPress={handleShareInvite}
+                    disabled={!roomCode}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share room invite"
+                    style={({ pressed }) => [
+                      styles.copyBtn,
+                      styles.inviteBtn,
+                      pressed && styles.copyBtnPressed,
                     ]}
                   >
-                    {hasCopied ? 'COPIED' : 'COPY'}
-                  </Text>
-                </Pressable>
+                    {hasCopied ? (
+                      <Check size={14} color={Colors.correct} />
+                    ) : (
+                      <Share2 size={14} color={Colors.primaryDark} />
+                    )}
+                    <Text
+                      style={[
+                        styles.copyBtnText,
+                        hasCopied && styles.copyBtnTextSuccess,
+                      ]}
+                    >
+                      {hasCopied ? 'INVITE COPIED' : 'INVITE A FRIEND'}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
-            </View>
+            )}
 
             <Text style={styles.waitingSubtitle}>
               {opponentPlayer
                 ? `Matched with ${opponentPlayer.name}! Round 1 starting shortly...`
-                : 'Share this battle room code with a friend or open a second window to play!'}
+                : isPrivateRoom
+                ? 'Your friend enters this code and password under Join Room.'
+                : 'Pairing you with another player...'}
             </Text>
           </View>
         )}
@@ -933,7 +977,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 12,
+    gap: 28,
+  },
+  inviteBtn: {
+    marginTop: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10, // comfortable thumb target
+    borderRadius: 12,
   },
   roomCodeValue: {
     fontFamily: Fonts.heading,

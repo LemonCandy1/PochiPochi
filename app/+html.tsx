@@ -15,7 +15,19 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <title>PochiPochi — 1v1 Battle Arena</title>
+        <title>PochiPochi</title>
+        <meta
+          name="description"
+          content="Buzzer-speed trivia for people who know weirdly specific things. Battle friends 1v1 with a room code."
+        />
+        {/* Installable from the browser ("Add to Home Screen") on iPhone and Android */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#F8F5EE" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="PochiPochi" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" href="/icon-1024.png" />
         <ScrollViewStyleReset />
         <script src="https://cdn.tailwindcss.com"></script>
         {/* Flaticon UIcons - Most Downloaded Icon Fonts */}
@@ -37,7 +49,7 @@ export default function Root({ children }: PropsWithChildren) {
               height: 100%;
               margin: 0;
               padding: 0;
-              background-color: #020617;
+              background-color: #F8F5EE;
             }
           `,
         }} />

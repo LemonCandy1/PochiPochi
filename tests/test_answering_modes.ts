@@ -33,7 +33,7 @@ async function testModes() {
   await new Promise((res) => ws.once('open', res));
 
   // Step 1: Join Room and verify JOIN_ACK
-  ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId: 'modes-room', playerName: 'Tester' } as ClientMessage));
+  ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'Tester', password: '1234' } as ClientMessage));
   await delay(100);
 
   const ack = messages.find((m) => m.type === 'JOIN_ACK');
@@ -43,7 +43,7 @@ async function testModes() {
   console.log(`✓ JOIN_ACK verified: yourPlayerId=${ack.yourPlayerId}`);
 
   // Step 2: Auto-start bot sparring partner or start round
-  const room = server.getOrCreateRoom('modes-room');
+  const room = server.getRoom(ack.roomId)!;
   room.startRoundIntro();
   await delay(100);
 

@@ -1,6 +1,7 @@
+import { useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { BookmarkX, ExternalLink } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -21,18 +22,28 @@ export default function BookmarksScreen() {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
 
   const loadBookmarks = useCallback(async () => {
-    const list = await PochiRepository.getBookmarks();
+    const list = await PochiRepository.getBookmarks(true);
     setBookmarks(list);
   }, []);
 
-  // Reload when screen appears
-  React.useEffect(() => {
+  // Reload immediately whenever this tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      loadBookmarks();
+    }, [loadBookmarks])
+  );
+
+  // Live real-time subscription: whenever any question is saved anywhere in the app, update immediately
+  useEffect(() => {
     loadBookmarks();
+    const unsubscribe = PochiRepository.subscribeToBookmarks((updatedList) => {
+      setBookmarks(updatedList);
+    });
+    return unsubscribe;
   }, [loadBookmarks]);
 
   const handleRemove = async (q: Bookmark['question']) => {
     await PochiRepository.toggleBookmark(q);
-    loadBookmarks();
   };
 
   const handleOpenWikipedia = async (answer: string, url?: string) => {

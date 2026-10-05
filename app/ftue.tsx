@@ -113,16 +113,16 @@ export default function FTUEScreen() {
   const questionPulseAnim = useRef(new Animated.Value(0)).current;
 
   // Screen 5: Roll-up counter & Flame Ignite
-  const animatedElo = useRef(new Animated.Value(1000)).current;
-  const [displayElo, setDisplayElo] = useState<number>(1000);
+  const animatedElo = useRef(new Animated.Value(100)).current;
+  const [displayElo, setDisplayElo] = useState<number>(100);
   const flameAnim = useRef(new Animated.Value(0)).current;
   const [expandedAccordionIndex, setExpandedAccordionIndex] = useState<number | null>(null);
 
   // Screen 6: Auth loading state
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
 
-  // Calculated Calibrated Elo
-  const calibratedFinalElo = useRef<number>(1260);
+  // Calculated Calibrated Elo (200 - 600 scale)
+  const calibratedFinalElo = useRef<number>(350);
 
   // --------------------------------------------------------------------------
   // SCREEN 1: THE TACTILE HOOK
@@ -309,15 +309,20 @@ export default function FTUEScreen() {
         setCurrentSpeedMult(2.0);
         startTimeRef.current = Date.now();
       } else {
-        // Calibration finished! Calculate calibrated Elo
+        // Calibration finished! Calculate calibrated Elo (200 - 600 scale)
         const correctCount = nextResults.filter((r) => r.wasCorrect).length;
-        let base = 1200;
-        if (correctCount === 3) base = 1260;
-        else if (correctCount === 2) base = 1230;
-        else if (correctCount === 1) base = 1180;
-        else base = 1140;
+        const avgSpeed =
+          nextResults.reduce((acc, r) => acc + (r.interruptSpeedMs || 5000), 0) /
+          Math.max(1, nextResults.length);
+        const speedBonus = Math.max(0, Math.min(40, Math.round((6000 - avgSpeed) / 100)));
 
-        calibratedFinalElo.current = base;
+        let base = 350;
+        if (correctCount === 3) base = 560 + speedBonus; // 560 - 600
+        else if (correctCount === 2) base = 460 + Math.round(speedBonus * 0.7); // 460 - 488
+        else if (correctCount === 1) base = 330 + Math.round(speedBonus * 0.5); // 330 - 350
+        else base = 220; // 220
+
+        calibratedFinalElo.current = Math.min(620, Math.max(200, base));
         setCurrentStep(5);
       }
     }, 1200);
@@ -329,8 +334,8 @@ export default function FTUEScreen() {
   useEffect(() => {
     if (currentStep !== 5) return;
 
-    // Roll up counter animation from 1000 to calibrated Elo
-    animatedElo.setValue(1000);
+    // Roll up counter animation from 100 to calibrated Elo (200-600)
+    animatedElo.setValue(100);
     const listenerId = animatedElo.addListener(({ value }) => {
       setDisplayElo(Math.round(value));
     });
@@ -368,7 +373,7 @@ export default function FTUEScreen() {
       guestId: 'tester-' + Date.now(),
       selectedCompanion: selectedCompanion || 'dog',
       selectedCategory: selectedCategory || 'geography',
-      calibratedElo: 1200,
+      calibratedElo: calibratedFinalElo.current || 350,
       sessionStreak: 1,
       completedQuestions: [],
     };

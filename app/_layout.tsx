@@ -12,7 +12,7 @@ import {
   SpaceMono_400Regular,
   SpaceMono_700Bold,
 } from '@expo-google-fonts/space-mono';
-import { SplashScreen, Stack, router } from 'expo-router';
+import { SplashScreen, Stack, router, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect } from 'react';
@@ -35,12 +35,14 @@ export default function RootLayout() {
     SpaceMono_700Bold,
     SpaceMono_400Regular,
   });
+  const pathname = usePathname();
 
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
       PochiRepository.hasCompletedFTUE().then((completed) => {
-        if (!completed) {
+        // A friend opening a battle invite link goes straight to the room, not onboarding
+        if (!completed && !pathname.startsWith('/battle')) {
           router.replace('/ftue');
         }
       });

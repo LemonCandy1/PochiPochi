@@ -23,9 +23,14 @@ interface NTPSample {
   t4: number;
 }
 
+export type BattleJoinMode = 'quick' | 'create' | 'join';
+
 export interface UseBattleClientOptions {
   serverUrl?: string;
+  /** 'create' hosts a private room, 'join' enters one by code + password, 'quick' matchmakes. */
+  mode?: BattleJoinMode;
   roomId?: string;
+  password?: string;
   playerName?: string;
   autoConnect?: boolean;
 }
@@ -38,6 +43,11 @@ export interface UseBattleClientReturn {
   rtt: number;
   clockOffset: number;
   isNtpCalibrated: boolean;
+
+  /** Server-assigned room code once joined */
+  roomCode: string | null;
+  isPrivateRoom: boolean;
+  joinError: string | null;
 
   roomState: RoomState;
   players: Player[];
@@ -77,7 +87,9 @@ const DEFAULT_SERVER_URL = 'ws://localhost:4001';
 
 export function useBattleClient({
   serverUrl = DEFAULT_SERVER_URL,
-  roomId = 'quick-match',
+  mode = 'quick',
+  roomId = '',
+  password = '',
   playerName = 'PochiPlayer',
   autoConnect = true,
 }: UseBattleClientOptions = {}): UseBattleClientReturn {
@@ -97,6 +109,11 @@ export function useBattleClient({
   const [connectionStatus, setConnectionStatus] = useState<
     'CONNECTING' | 'CONNECTED' | 'DISCONNECTED'
   >('DISCONNECTED');
+  // Once the server places us in a room, reconnects rejoin that exact room
+  const assignedRoomIdRef = useRef<string | null>(null);
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [isPrivateRoom, setIsPrivateRoom] = useState<boolean>(mode !== 'quick');
+  const [joinError, setJoinError] = useState<string | null>(null);
   const [roomState, setRoomState] = useState<RoomState>('LOBBY');
   const [players, setPlayers] = useState<Player[]>([]);
   const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
@@ -151,14 +168,24 @@ export function useBattleClient({
         reconnectTimeoutRef.current = null;
       }
 
-      ws.send(
-        JSON.stringify({
+      const reconnectPlayerId = myPlayerIdRef.current || undefined;
+      let joinMsg: ClientMessage;
+      if (assignedRoomIdRef.current) {
+        joinMsg = {
           type: 'JOIN_ROOM',
-          roomId,
+          roomId: assignedRoomIdRef.current,
+          password,
           playerName,
-          reconnectPlayerId: myPlayerIdRef.current || undefined,
-        })
-      );
+          reconnectPlayerId,
+        };
+      } else if (mode === 'create') {
+        joinMsg = { type: 'CREATE_ROOM', playerName, password, reconnectPlayerId };
+      } else if (mode === 'join') {
+        joinMsg = { type: 'JOIN_ROOM', roomId, password, playerName, reconnectPlayerId };
+      } else {
+        joinMsg = { type: 'QUICK_MATCH', playerName, reconnectPlayerId };
+      }
+      ws.send(JSON.stringify(joinMsg));
 
       // Immediate NTP sync ping
       ws.send(JSON.stringify({ type: 'SYNC_PING', t1: Date.now() }));
@@ -200,6 +227,18 @@ export function useBattleClient({
         if (msg.type === 'JOIN_ACK') {
           myPlayerIdRef.current = msg.yourPlayerId;
           setMyPlayerId(msg.yourPlayerId);
+          assignedRoomIdRef.current = msg.roomId;
+          setRoomCode(msg.roomId);
+          setIsPrivateRoom(msg.isPrivate);
+          setJoinError(null);
+          return;
+        }
+
+        if (msg.type === 'JOIN_ERROR') {
+          // Retrying won't fix a wrong code/password, so stop the reconnect loop
+          isIntentionalDisconnectRef.current = true;
+          setJoinError(msg.message);
+          ws.close();
           return;
         }
 
@@ -381,7 +420,7 @@ export function useBattleClient({
     ws.onerror = () => {
       setConnectionStatus('DISCONNECTED');
     };
-  }, [serverUrl, roomId, playerName, send, sendSyncPing]);
+  }, [serverUrl, mode, roomId, password, playerName, send, sendSyncPing]);
 
   const disconnect = useCallback(() => {
     isIntentionalDisconnectRef.current = true;
@@ -483,6 +522,9 @@ export function useBattleClient({
     connectionStatus,
     connect,
     disconnect,
+    roomCode,
+    isPrivateRoom,
+    joinError,
     rtt,
     clockOffset,
     isNtpCalibrated,

@@ -20,7 +20,7 @@ function delay(ms: number) {
 
 async function runStabilityTest() {
   console.log('--- Testing Connection & Round Progression Stability ---');
-  const server = new BattleServer(TEST_PORT);
+  const server = new BattleServer(TEST_PORT, { quickMatchBotDelayMs: 1800 });
 
   const ws = new WebSocket(`ws://localhost:${TEST_PORT}`);
   const messages: ServerMessage[] = [];
@@ -32,7 +32,7 @@ async function runStabilityTest() {
   await new Promise((res) => ws.once('open', res));
 
   // Step 1: Join Room
-  ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId: 'stable-room', playerName: 'StabilityTester' } as ClientMessage));
+  ws.send(JSON.stringify({ type: 'QUICK_MATCH', playerName: 'StabilityTester' } as ClientMessage));
 
   // Step 2: Immediate Ping
   ws.send(JSON.stringify({ type: 'SYNC_PING', t1: Date.now() } as ClientMessage));

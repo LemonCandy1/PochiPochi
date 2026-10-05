@@ -1,0 +1,14 @@
+{
+  "name": "PochiPochi",
+  "short_name": "PochiPochi",
+  "description": "Buzzer-speed trivia for people who know weirdly specific things. Battle friends 1v1 with a room code.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8F5EE",
+  "theme_color": "#F8F5EE",
+  "icons": [
+    { "src": "/icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any" }
+  ]
+}

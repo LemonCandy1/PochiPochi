@@ -298,6 +298,26 @@ npx expo start --web
 npx tsc --noEmit
 ```
 
+### Multiplayer Rooms
+Players reach a 1v1 battle three ways from **Battle Arena**:
+- **Quick Match**: pairs you with another waiting player. PochiBot steps in after ~8s if nobody shows up.
+- **Create Room**: the server assigns a 5-character code (no `0/O/1/I`). The host sets a 4–12 character password (a random 4-digit PIN is prefilled) and taps **Invite a friend** to share the code, password, and a link.
+- **Join Room**: enter the code and password. Invite links (`/battle?code=ABCDE&pw=1234`) open with both prefilled.
+
+Private rooms hold 2 players, never get a bot, reject wrong passwords (5 failed tries closes the connection), and let a dropped player rejoin mid-game with their score.
+
+```bash
+npm run battle:server              # local server on :4001 (phones on the same Wi-Fi connect automatically in dev)
+npx -y tsx tests/test_room_codes.ts
+```
+
+### Shipping to iPhone, Samsung & Web
+1. **Deploy the battle server** (release builds connect to `wss://pochipochi-battle.fly.dev`): `fly deploy`
+2. **iPhone (App Store / TestFlight)**: `eas build -p ios --profile production`, then `eas submit -p ios`. Needs an Apple Developer account.
+3. **Android / Samsung (Google Play, Galaxy Store)**: `eas build -p android --profile production`, then `eas submit -p android` (uploads to the internal testing track). The same `.aab` can be uploaded to Samsung Galaxy Store in its seller portal.
+   - Quick sideload for testers: `eas build -p android --profile preview` produces an `.apk` with a direct download link.
+4. **Web (no install)**: `npx expo export -p web` and host `dist/` on any static host (Netlify, Vercel, Cloudflare Pages) with SPA fallback to `index.html`. Set `EXPO_PUBLIC_WEB_URL` to that address so invite links open in the browser for friends without the app. The site can be added to the home screen on iOS Safari and Samsung Internet.
+
 ---
 
 ## 9. Key Highlights & Technical Decisions

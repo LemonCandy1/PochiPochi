@@ -94,10 +94,12 @@ async function testServerIntegration() {
   await new Promise((res) => ws.once('open', res));
 
   // Join Room
-  ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomId: 'dynamic-room', playerName: 'DynamicTester' } as ClientMessage));
+  ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'DynamicTester', password: '1234' } as ClientMessage));
   await delay(100);
 
-  const room = server.getOrCreateRoom('dynamic-room');
+  const ack = messages.find((m) => m.type === 'JOIN_ACK');
+  assert(Boolean(ack && ack.type === 'JOIN_ACK'), 'Server did not return JOIN_ACK');
+  const room = server.getRoom((ack as any).roomId)!;
   room.startRoundIntro();
   await delay(100);
 

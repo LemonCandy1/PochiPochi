@@ -59,15 +59,21 @@ async function runE2ETest() {
   // Step 2: Join Room
   wsAlice.send(
     JSON.stringify({
-      type: 'JOIN_ROOM',
-      roomId: 'e2e-room',
+      type: 'CREATE_ROOM',
       playerName: 'Alice',
+      password: '4242',
     } as ClientMessage)
   );
+  await delay(100);
+  const aliceAck = aliceMessages.find((m) => m.type === 'JOIN_ACK');
+  if (!aliceAck || aliceAck.type !== 'JOIN_ACK') {
+    throw new Error('Alice did not receive JOIN_ACK for her new room');
+  }
   wsBob.send(
     JSON.stringify({
       type: 'JOIN_ROOM',
-      roomId: 'e2e-room',
+      roomId: aliceAck.roomId,
+      password: '4242',
       playerName: 'Bob',
     } as ClientMessage)
   );
@@ -82,7 +88,7 @@ async function runE2ETest() {
   console.log('✓ Room initialized with Alice and Bob in LOBBY');
 
   // Step 3: Trigger match
-  const room = server.getOrCreateRoom('e2e-room');
+  const room = server.getRoom(aliceAck.roomId)!;
   room.startRoundIntro();
   await delay(100);
 

@@ -21,13 +21,107 @@ import {
   generateAnswerMatrix,
 } from '../src/battle/matrixGenerator';
 import {
+  ROOM_CODE_ALPHABET,
+  ROOM_CODE_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  MAX_PASSWORD_LENGTH,
+  normalizeRoomCode,
+} from '../src/battle/roomCode';
+import {
   ClientMessage,
+  JoinErrorReason,
   MatrixTile,
   Player,
   RoomState,
   ServerMessage,
   TriviaQuestion,
 } from '../src/battle/types';
+import fs from 'fs';
+import path from 'path';
+
+// ── Supabase dynamic question pool ──────────────────────────────────────────
+let DYNAMIC_QUESTION_POOL: TriviaQuestion[] = [];
+
+function shuffleArray<T>(arr: T[]): T[] {
+  const copy = [...arr];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+async function loadQuestionsFromSupabase(): Promise<void> {
+  try {
+    // Read .env manually (no dotenv dependency needed)
+    const envPath = path.resolve(__dirname, '../.env');
+    if (fs.existsSync(envPath)) {
+      const lines = fs.readFileSync(envPath, 'utf8').split('\n');
+      for (const line of lines) {
+        const parts = line.split('=');
+        if (parts.length >= 2 && !line.startsWith('#')) {
+          process.env[parts[0].trim()] = parts.slice(1).join('=').trim();
+        }
+      }
+    }
+
+    const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://ndkimouioysvlunqpdnl.supabase.co';
+    const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_KEY || 'sb_publishable_fqhrSxZFfiWRtDV_znrqoQ_vxiTqKum';
+
+    // Fetch all questions from Supabase in pages of 1,000 to cover all categories
+    let allRows: any[] = [];
+    let offset = 0;
+    const limit = 1000;
+    while (true) {
+      const url = `${SUPABASE_URL}/rest/v1/questions?select=id,clue_text,answer,options,category&limit=${limit}&offset=${offset}`;
+      const res = await fetch(url, {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        console.warn(`[Battle Server] Supabase fetch failed at offset ${offset} (${res.status}).`);
+        break;
+      }
+
+      const rows: any[] = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) break;
+      allRows = allRows.concat(rows);
+      if (rows.length < limit) break;
+      offset += limit;
+    }
+
+    if (allRows.length === 0) {
+      console.warn('[Battle Server] Supabase returned empty question set. Using fallback pool.');
+      return;
+    }
+
+    DYNAMIC_QUESTION_POOL = shuffleArray(
+      allRows
+        .filter((r: any) => r.clue_text && r.answer)
+        .map((r: any) => ({
+          id: r.id,
+          category: (r.category || 'TRIVIA').toUpperCase(),
+          question: r.clue_text,
+          answer: (r.answer as string).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+          options: Array.isArray(r.options)
+            ? r.options.map((o: string) => o.toUpperCase().replace(/[^A-Z0-9 ]/g, '').trim())
+            : [],
+        }))
+    );
+
+    const catCounts: Record<string, number> = {};
+    for (const q of DYNAMIC_QUESTION_POOL) {
+      catCounts[q.category] = (catCounts[q.category] || 0) + 1;
+    }
+    console.log(`[Battle Server] Loaded ${DYNAMIC_QUESTION_POOL.length} questions from Supabase across categories:`, catCounts);
+  } catch (err) {
+    console.warn('[Battle Server] Could not load questions from Supabase:', (err as Error).message);
+  }
+}
 
 const PORT = Number(process.env.PORT || 4001);
 const CHAR_STREAM_INTERVAL_MS = 65; // 1.3x faster reveal speed (was 85ms)
@@ -38,6 +132,16 @@ const ROUND_INTRO_DURATION_MS = 3000;
 const ROUND_RESOLVED_DURATION_MS = 4000;
 const TARGET_WIN_SCORE = 100;
 const MAX_ROUNDS = 10;
+
+// Rooms & matchmaking
+const MAX_HUMANS_PER_ROOM = 2;
+const QUICK_MATCH_BOT_DELAY_MS = 8000; // give a real opponent time to show up before PochiBot steps in
+const EMPTY_ROOM_TTL_MS = 60000; // keep an empty room alive briefly so a dropped host can reconnect
+const MAX_FAILED_JOINS_PER_SOCKET = 5;
+
+export interface BattleServerOptions {
+  quickMatchBotDelayMs?: number;
+}
 
 // Curated trivia pool with Jeopardy! / Battle-style progressive clues
 const QUESTION_POOL: TriviaQuestion[] = [
@@ -138,6 +242,13 @@ interface IncomingBuzz {
 
 export class BattleRoom {
   public id: string;
+  public isPrivate: boolean;
+  public password: string;
+  public botDelayMs: number;
+  public emptyRoomTimer: ReturnType<typeof setTimeout> | null = null;
+  // Everyone who has joined, so a dropped player can rejoin mid-game and keep their score
+  public memberIds = new Set<string>();
+  public departedScores = new Map<string, number>();
   public state: RoomState = 'LOBBY';
   public round = 0;
   public totalRounds = MAX_ROUNDS;
@@ -146,6 +257,7 @@ export class BattleRoom {
   // Question & Streaming
   public currentQuestionIndex = 0;
   public currentQuestion: TriviaQuestion | null = null;
+  public usedQuestionIds = new Set<string>(); // prevents repeats within a game
   public currentTiles: MatrixTile[] = [];
   public streamedCharIndex = 0;
   public questionStartTime = 0;
@@ -171,8 +283,18 @@ export class BattleRoom {
   public roundResolvedTimer: ReturnType<typeof setTimeout> | null = null;
   public streamEndGraceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(id: string) {
+  constructor(
+    id: string,
+    { isPrivate = false, password = '', botDelayMs = QUICK_MATCH_BOT_DELAY_MS } = {}
+  ) {
     this.id = id;
+    this.isPrivate = isPrivate;
+    this.password = password;
+    this.botDelayMs = botDelayMs;
+  }
+
+  public humanCount(): number {
+    return Array.from(this.players.keys()).filter((id) => !id.startsWith('bot-')).length;
   }
 
   public broadcast(msg: ServerMessage) {
@@ -189,26 +311,44 @@ export class BattleRoom {
   }
 
   public addPlayer(ws: WebSocket, playerId: string, playerName: string) {
+    if (this.emptyRoomTimer) {
+      clearTimeout(this.emptyRoomTimer);
+      this.emptyRoomTimer = null;
+    }
+
+    const isRejoin = this.memberIds.has(playerId);
+    this.memberIds.add(playerId);
+
     const player: Player = {
       id: playerId,
       name: playerName,
-      score: 0,
+      score: this.departedScores.get(playerId) ?? 0,
       isReady: false,
       rtt: 0,
       clockOffset: 0,
       isLockedOut: false,
     };
+    this.departedScores.delete(playerId);
     this.players.set(playerId, { ws, player, roomId: this.id });
-    this.syncRoomState();
 
     // If real human joined and bot exists, remove the bot
-    if (playerId !== 'bot-pochi' && this.players.has('bot-pochi')) {
+    if (playerId !== 'bot-pochi' && this.players.has('bot-pochi') && this.state === 'LOBBY') {
       this.players.delete('bot-pochi');
     }
+    this.syncRoomState();
+
+    // A rejoin mid-game slots straight back in without touching the game flow
+    if (isRejoin && this.state !== 'LOBBY' && this.state !== 'GAME_OVER') return;
 
     if (this.lobbyStartTimer) {
       clearTimeout(this.lobbyStartTimer);
       this.lobbyStartTimer = null;
+    }
+
+    if (this.state === 'GAME_OVER') {
+      this.state = 'LOBBY';
+      this.round = 0;
+      this.currentQuestion = null;
     }
 
     // Auto-start if 2 or more players joined and room is idle
@@ -218,19 +358,20 @@ export class BattleRoom {
           this.startRoundIntro();
         }
       }, 1000);
-    } else if (this.players.size === 1 && this.state === 'LOBBY') {
-      // If solo player after 1.8s, spawn bot sparring partner so match begins
+    } else if (this.players.size === 1 && this.state === 'LOBBY' && !this.isPrivate) {
+      // Quick match only: if nobody shows up, spawn a bot sparring partner.
+      // Private rooms always wait for the invited friend.
       this.lobbyStartTimer = setTimeout(() => {
         if (this.state === 'LOBBY' && this.players.size === 1) {
           this.addBotPlayer();
         }
-      }, 1800);
+      }, this.botDelayMs);
     }
   }
 
   public addBotPlayer() {
     if (this.players.has('bot-pochi') || this.players.size >= 2) return;
-    if (this.state !== 'LOBBY') return;
+    if (this.state !== 'LOBBY' || this.isPrivate) return;
 
     const mockWs = {
       readyState: WebSocket.OPEN,
@@ -260,14 +401,12 @@ export class BattleRoom {
   }
 
   public removePlayer(playerId: string) {
+    const leaving = this.players.get(playerId);
+    if (leaving) this.departedScores.set(playerId, leaving.player.score);
     this.players.delete(playerId);
     this.syncRoomState();
 
-    const humanCount = Array.from(this.players.values()).filter(
-      (c) => !c.player.id.startsWith('bot-')
-    ).length;
-
-    if (humanCount === 0) {
+    if (this.humanCount() === 0) {
       this.clearAllTimers();
       this.players.clear();
       this.state = 'LOBBY';
@@ -295,6 +434,8 @@ export class BattleRoom {
     if (this.roundIntroTimer) clearTimeout(this.roundIntroTimer);
     if (this.roundResolvedTimer) clearTimeout(this.roundResolvedTimer);
     if (this.streamEndGraceTimer) clearTimeout(this.streamEndGraceTimer);
+    if (this.emptyRoomTimer) clearTimeout(this.emptyRoomTimer);
+    this.emptyRoomTimer = null;
     this.streamInterval = null;
     this.arbitrationTimer = null;
     this.answerTimer = null;
@@ -321,9 +462,17 @@ export class BattleRoom {
       client.player.isLockedOut = false;
     }
 
-    // Select question
-    const qIndex = (this.round - 1) % QUESTION_POOL.length;
-    this.currentQuestion = QUESTION_POOL[qIndex];
+    // Select question — prefer dynamic Supabase pool, fall back to static pool
+    const pool = DYNAMIC_QUESTION_POOL.length > 0 ? DYNAMIC_QUESTION_POOL : QUESTION_POOL;
+    // Pick a random question not used yet in this game session (no repeats)
+    let available = pool.filter((q) => !this.usedQuestionIds.has(q.id));
+    if (available.length === 0) {
+      this.usedQuestionIds.clear();
+      available = pool;
+    }
+    const picked = available[Math.floor(Math.random() * available.length)];
+    this.usedQuestionIds.add(picked.id);
+    this.currentQuestion = picked;
     this.streamedCharIndex = 0;
 
     // Generate 4x4 matrix tiles (16 tiles) without exposing answer
@@ -337,7 +486,7 @@ export class BattleRoom {
       category: this.currentQuestion.category,
       answerLength: cleanAns.length,
       tiles: this.currentTiles,
-      options: this.currentQuestion.options || [],
+      options: shuffleArray(this.currentQuestion.options || []),
       cleanAnswer: cleanAns,
       durationMs: ROUND_INTRO_DURATION_MS,
     });
@@ -686,8 +835,10 @@ export class BattleServer {
   private wss: any;
   private rooms = new Map<string, BattleRoom>();
   private clientMap = new Map<WebSocket, ConnectedClient>();
+  private quickMatchBotDelayMs: number;
 
-  constructor(port = PORT) {
+  constructor(port = PORT, options: BattleServerOptions = {}) {
+    this.quickMatchBotDelayMs = options.quickMatchBotDelayMs ?? QUICK_MATCH_BOT_DELAY_MS;
     this.server = http.createServer((req, res) => {
       const url = req.url || '/';
 
@@ -725,21 +876,111 @@ export class BattleServer {
 
     this.server.listen(port, () => {
       console.log(`[Battle Server] Listening on ws://localhost:${port} (health: /healthz)`);
+      // Load questions from Supabase in background after server is up
+      loadQuestionsFromSupabase().catch((err) => {
+        console.warn('[Battle Server] Background question load failed:', err.message);
+      });
     });
   }
 
-  public getOrCreateRoom(roomId = 'quick-match'): BattleRoom {
-    let room = this.rooms.get(roomId);
-    if (!room) {
-      room = new BattleRoom(roomId);
-      this.rooms.set(roomId, room);
-    }
+  public getRoom(roomId: string): BattleRoom | undefined {
+    return this.rooms.get(normalizeRoomCode(roomId));
+  }
+
+  private generateRoomCode(): string {
+    let code = '';
+    do {
+      code = '';
+      for (let i = 0; i < ROOM_CODE_LENGTH; i++) {
+        code += ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)];
+      }
+    } while (this.rooms.has(code));
+    return code;
+  }
+
+  private createRoom(isPrivate: boolean, password = ''): BattleRoom {
+    const room = new BattleRoom(this.generateRoomCode(), {
+      isPrivate,
+      password,
+      botDelayMs: this.quickMatchBotDelayMs,
+    });
+    this.rooms.set(room.id, room);
     return room;
+  }
+
+  // Pair with the oldest public room that has exactly one human waiting
+  private findQuickMatchRoom(): BattleRoom {
+    for (const room of this.rooms.values()) {
+      if (
+        !room.isPrivate &&
+        room.state === 'LOBBY' &&
+        room.humanCount() === 1 &&
+        !room.players.has('bot-pochi')
+      ) {
+        return room;
+      }
+    }
+    return this.createRoom(false);
+  }
+
+  // Returns an error to send back, or null if the player may enter the room
+  private validateJoin(
+    room: BattleRoom | undefined,
+    password: string | undefined,
+    reconnectPlayerId: string | undefined
+  ): { reason: JoinErrorReason; message: string } | null {
+    if (!room) {
+      return { reason: 'NOT_FOUND', message: "We couldn't find that room. Double-check the code." };
+    }
+    if (room.isPrivate && (password || '') !== room.password) {
+      return { reason: 'BAD_PASSWORD', message: "That password doesn't match this room." };
+    }
+    const isRejoin = Boolean(reconnectPlayerId && room.memberIds.has(reconnectPlayerId));
+    if (isRejoin) return null;
+    if (room.humanCount() >= MAX_HUMANS_PER_ROOM) {
+      return { reason: 'ROOM_FULL', message: 'This room already has two players.' };
+    }
+    if (room.state !== 'LOBBY' && room.state !== 'GAME_OVER') {
+      return { reason: 'IN_PROGRESS', message: 'That battle has already started.' };
+    }
+    return null;
   }
 
   private setupWebSocket() {
     this.wss.on('connection', (ws: WebSocket) => {
       let currentClient: ConnectedClient | null = null;
+      let failedJoins = 0;
+
+      const sendJoinError = (reason: JoinErrorReason, message: string) => {
+        ws.send(JSON.stringify({ type: 'JOIN_ERROR', reason, message } as ServerMessage));
+      };
+
+      const enterRoom = (room: BattleRoom, playerName: string, reconnectPlayerId?: string) => {
+        // Leaving a previous room on the same socket (e.g. retrying a join)
+        if (currentClient && currentClient.roomId !== room.id) {
+          this.leaveRoom(currentClient, ws);
+        }
+        const playerId =
+          reconnectPlayerId || `p-${Math.random().toString(36).substring(2, 9)}`;
+        const name = (playerName || 'Player').trim().slice(0, 16) || 'Player';
+
+        room.addPlayer(ws, playerId, name);
+        currentClient = room.players.get(playerId) || null;
+        if (currentClient) {
+          this.clientMap.set(ws, currentClient);
+        }
+
+        // Immediately send JOIN_ACK so client knows their exact assigned playerId
+        ws.send(
+          JSON.stringify({
+            type: 'JOIN_ACK',
+            yourPlayerId: playerId,
+            roomId: room.id,
+            isHost: room.humanCount() === 1,
+            isPrivate: room.isPrivate,
+          } as ServerMessage)
+        );
+      };
 
       ws.on('message', (raw: Buffer) => {
         try {
@@ -760,28 +1001,43 @@ export class BattleServer {
           }
 
           // 2. Room Connection & Setup
-          if (msg.type === 'JOIN_ROOM') {
-            const roomId = msg.roomId || 'quick-match';
-            const playerId =
-              (msg as any).reconnectPlayerId ||
-              `p-${Math.random().toString(36).substring(2, 9)}`;
-            const room = this.getOrCreateRoom(roomId);
-
-            room.addPlayer(ws, playerId, msg.playerName || 'Player');
-            currentClient = room.players.get(playerId) || null;
-            if (currentClient) {
-              this.clientMap.set(ws, currentClient);
+          if (msg.type === 'CREATE_ROOM') {
+            const password = String(msg.password || '').trim();
+            if (password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
+              sendJoinError(
+                'BAD_PASSWORD',
+                `Room passwords need ${MIN_PASSWORD_LENGTH}-${MAX_PASSWORD_LENGTH} characters.`
+              );
+              return;
             }
+            enterRoom(this.createRoom(true, password), msg.playerName, msg.reconnectPlayerId);
+            return;
+          }
 
-            // Immediately send JOIN_ACK so client knows their exact assigned playerId
-            ws.send(
-              JSON.stringify({
-                type: 'JOIN_ACK',
-                yourPlayerId: playerId,
-                roomId,
-                isHost: room.players.size === 1,
-              })
-            );
+          if (msg.type === 'QUICK_MATCH') {
+            enterRoom(this.findQuickMatchRoom(), msg.playerName, msg.reconnectPlayerId);
+            return;
+          }
+
+          if (msg.type === 'JOIN_ROOM') {
+            // Legacy clients sent roomId 'quick-match' for public matchmaking
+            if (!msg.roomId || msg.roomId === 'quick-match') {
+              enterRoom(this.findQuickMatchRoom(), msg.playerName, msg.reconnectPlayerId);
+              return;
+            }
+            if (failedJoins >= MAX_FAILED_JOINS_PER_SOCKET) {
+              sendJoinError('TOO_MANY_ATTEMPTS', 'Too many wrong attempts. Try again in a bit.');
+              ws.close();
+              return;
+            }
+            const room = this.getRoom(msg.roomId);
+            const error = this.validateJoin(room, msg.password, msg.reconnectPlayerId);
+            if (error || !room) {
+              failedJoins += 1;
+              sendJoinError(error!.reason, error!.message);
+              return;
+            }
+            enterRoom(room, msg.playerName, msg.reconnectPlayerId);
             return;
           }
 
@@ -817,17 +1073,26 @@ export class BattleServer {
 
       ws.on('close', () => {
         if (currentClient) {
-          const room = this.rooms.get(currentClient.roomId);
-          if (room) {
-            room.removePlayer(currentClient.player.id);
-            if (room.players.size === 0) {
-              this.rooms.delete(room.id);
-            }
-          }
+          this.leaveRoom(currentClient, ws);
           this.clientMap.delete(ws);
         }
       });
     });
+  }
+
+  private leaveRoom(client: ConnectedClient, ws: WebSocket) {
+    const room = this.rooms.get(client.roomId);
+    if (!room) return;
+    // A stale socket closing after its player already reconnected must not evict them
+    if (room.players.get(client.player.id)?.ws !== ws) return;
+
+    room.removePlayer(client.player.id);
+    if (room.humanCount() === 0) {
+      room.players.clear();
+      room.emptyRoomTimer = setTimeout(() => {
+        if (room.humanCount() === 0) this.rooms.delete(room.id);
+      }, EMPTY_ROOM_TTL_MS);
+    }
   }
 
   public close(): Promise<void> {

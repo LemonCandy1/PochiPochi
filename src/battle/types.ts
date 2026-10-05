@@ -37,10 +37,28 @@ export interface MatrixTile {
   isUsed?: boolean;
 }
 
+export type JoinErrorReason =
+  | 'NOT_FOUND'
+  | 'BAD_PASSWORD'
+  | 'ROOM_FULL'
+  | 'IN_PROGRESS'
+  | 'TOO_MANY_ATTEMPTS';
+
 // Client -> Server Messages
 export type ClientMessage =
   | { type: 'SYNC_PING'; t1: number }
-  | { type: 'JOIN_ROOM'; roomId: string; playerName: string }
+  // Host a private room; the server assigns the room code.
+  | { type: 'CREATE_ROOM'; playerName: string; password: string; reconnectPlayerId?: string }
+  // Join a private room by code + password (also used to rejoin after a dropped connection).
+  | {
+      type: 'JOIN_ROOM';
+      roomId: string;
+      playerName: string;
+      password?: string;
+      reconnectPlayerId?: string;
+    }
+  // Get paired with any open player; PochiBot steps in if nobody shows up.
+  | { type: 'QUICK_MATCH'; playerName: string; reconnectPlayerId?: string }
   | { type: 'PLAYER_READY' }
   | {
       type: 'BUZZ_REQUEST';
@@ -52,7 +70,14 @@ export type ClientMessage =
 
 // Server -> Client Messages
 export type ServerMessage =
-  | { type: 'JOIN_ACK'; yourPlayerId: string; roomId: string; isHost: boolean }
+  | {
+      type: 'JOIN_ACK';
+      yourPlayerId: string;
+      roomId: string;
+      isHost: boolean;
+      isPrivate: boolean;
+    }
+  | { type: 'JOIN_ERROR'; reason: JoinErrorReason; message: string }
   | { type: 'SYNC_PONG'; t1: number; t2: number; t3: number }
   | {
       type: 'ROOM_STATE';

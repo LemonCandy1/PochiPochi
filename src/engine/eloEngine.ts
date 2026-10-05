@@ -77,9 +77,35 @@ export function getEloRankTier(elo: number): {
   badgeId: RankBadgeId;
   color: string;
 } {
-  if (elo >= 2000) return { tier: 'Grandmaster Owl', badgeId: 'owl', color: '#00009F' };
-  if (elo >= 1700) return { tier: 'Trivia Master Cat', badgeId: 'cat', color: '#7C3AED' };
-  if (elo >= 1500) return { tier: 'Scholar Bear', badgeId: 'bear', color: '#059669' };
-  if (elo >= 1300) return { tier: 'Smart Pup', badgeId: 'pup', color: '#E08722' };
+  if (elo >= 1200) return { tier: 'Grandmaster Owl', badgeId: 'owl', color: '#00009F' };
+  if (elo >= 900) return { tier: 'Trivia Master Cat', badgeId: 'cat', color: '#7C3AED' };
+  if (elo >= 650) return { tier: 'Scholar Bear', badgeId: 'bear', color: '#059669' };
+  if (elo >= 400) return { tier: 'Smart Pup', badgeId: 'pup', color: '#E08722' };
   return { tier: 'Curious Novice', badgeId: 'novice', color: '#64748B' };
 }
+
+/**
+ * Calculates global expected/actual accuracy percentage for a question.
+ * Uses historical times_served/times_correct if >= 5 attempts,
+ * otherwise calculates calibrated expected percentage from question Elo (200 - 800).
+ */
+export function calculateGlobalCorrectPercentage(question: {
+  elo_rating?: number;
+  times_served?: number;
+  times_correct?: number;
+}): number {
+  if (question.times_served && question.times_served >= 5) {
+    const raw = Math.round((question.times_correct! / question.times_served) * 100);
+    return Math.max(10, Math.min(96, raw));
+  }
+  // Standard logistical probability curve based on calibrated question Elo:
+  // Elo 200 -> ~85%
+  // Elo 350 -> ~70%
+  // Elo 500 -> ~52%
+  // Elo 650 -> ~36%
+  const elo = question.elo_rating ?? 350;
+  const prob = 1 / (1 + Math.pow(10, (elo - 380) / 450));
+  const calculated = Math.round(prob * 100);
+  return Math.max(12, Math.min(94, calculated));
+}
+

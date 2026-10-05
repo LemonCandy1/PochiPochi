@@ -29,6 +29,7 @@ interface ResolutionCardProps {
   timeRemaining?: number;
   isBookmarked?: boolean;
   isLoadingNext?: boolean;
+  nextButtonLabel?: string;
   onToggleBookmark: () => void;
   onOpenReport: () => void;
   onNextQuestion: () => void;
@@ -43,6 +44,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
   timeRemaining,
   isBookmarked = false,
   isLoadingNext = false,
+  nextButtonLabel,
   onToggleBookmark,
   onOpenReport,
   onNextQuestion,
@@ -178,7 +180,7 @@ export const ResolutionCard: React.FC<ResolutionCardProps> = ({
           ]}
         >
           <Text style={styles.nextButtonText}>
-            {isLoadingNext ? 'Loading...' : 'Next Question →'}
+            {isLoadingNext ? 'Loading...' : (nextButtonLabel ?? 'Next Question →')}
           </Text>
         </Pressable>
       </View>
